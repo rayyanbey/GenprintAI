@@ -56,7 +56,7 @@ export default function PropertiesPanel() {
       <div>
         <h3 className="text-base font-bold text-gray-900 mb-4">Design Details</h3>
         <p className="text-sm text-gray-600 leading-relaxed">
-          AI has generated a vibrant, abstract design featuring geometric shapes with a retro color palette. The composition is balanced with energetic lines, creating a sense of dynamic movement. It's perfectly suited for a modern, creative t-shirt.
+          AI has generated a vibrant, abstract design featuring geometric shapes with a retro color palette. The composition is balanced with energetic lines, creating a sense of dynamic movement. It&apos;s perfectly suited for a modern, creative t-shirt.
         </p>
       </div>
     </div>

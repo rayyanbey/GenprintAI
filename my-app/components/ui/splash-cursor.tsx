@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, prefer-const */
 "use client";
 import { useEffect, useRef } from "react";
 
@@ -21,8 +22,9 @@ function SplashCursor({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const canvas = canvasRef.current;
+  if (!canvas) return;
+  const canvasEl = canvas as HTMLCanvasElement;
 
     let animationId: number;
     let isAnimating = false;
@@ -74,44 +76,44 @@ function SplashCursor({
         antialias: false,
         preserveDrawingBuffer: false,
       };
-      let gl = canvas.getContext("webgl2", params);
+  // Try WebGL2 first
+  let gl: WebGLRenderingContext | WebGL2RenderingContext | null = canvas.getContext("webgl2", params) as WebGL2RenderingContext | null;
       const isWebGL2 = !!gl;
-      if (!isWebGL2)
-        gl =
-          canvas.getContext("webgl", params) ||
-          canvas.getContext("experimental-webgl", params);
+      if (!isWebGL2) {
+        gl = (canvas.getContext("webgl", params) || canvas.getContext("experimental-webgl", params)) as WebGLRenderingContext | null;
+      }
+
       let halfFloat: any;
       let supportLinearFiltering: any;
       if (isWebGL2) {
-        gl!.getExtension("EXT_color_buffer_float");
-        supportLinearFiltering = gl!.getExtension("OES_texture_float_linear");
-      } else {
-        halfFloat = gl!.getExtension("OES_texture_half_float");
-        supportLinearFiltering = gl!.getExtension(
-          "OES_texture_half_float_linear"
-        );
+        (gl as WebGL2RenderingContext).getExtension("EXT_color_buffer_float");
+        supportLinearFiltering = (gl as WebGL2RenderingContext).getExtension("OES_texture_float_linear");
+      } else if (gl) {
+        halfFloat = (gl as WebGLRenderingContext).getExtension("OES_texture_half_float");
+        supportLinearFiltering = (gl as WebGLRenderingContext).getExtension("OES_texture_half_float_linear");
       }
-      gl!.clearColor(0.0, 0.0, 0.0, 1.0);
+
+      if (gl) (gl as WebGLRenderingContext).clearColor(0.0, 0.0, 0.0, 1.0);
       const halfFloatTexType = isWebGL2
-        ? gl!.HALF_FLOAT
+        ? (gl as WebGL2RenderingContext).HALF_FLOAT
         : halfFloat && halfFloat.HALF_FLOAT_OES;
       let formatRGBA: any;
       let formatRG: any;
       let formatR: any;
 
-      if (isWebGL2) {
+      if (isWebGL2 && gl) {
         formatRGBA = getSupportedFormat(
-          gl!,
-          gl!.RGBA16F,
-          gl!.RGBA,
+          gl as WebGL2RenderingContext,
+          (gl as WebGL2RenderingContext).RGBA16F,
+          (gl as WebGL2RenderingContext).RGBA,
           halfFloatTexType
         );
-        formatRG = getSupportedFormat(gl!, gl!.RG16F, gl!.RG, halfFloatTexType);
-        formatR = getSupportedFormat(gl!, gl!.R16F, gl!.RED, halfFloatTexType);
-      } else {
-        formatRGBA = getSupportedFormat(gl!, gl!.RGBA, gl!.RGBA, halfFloatTexType);
-        formatRG = getSupportedFormat(gl!, gl!.RGBA, gl!.RGBA, halfFloatTexType);
-        formatR = getSupportedFormat(gl!, gl!.RGBA, gl!.RGBA, halfFloatTexType);
+        formatRG = getSupportedFormat(gl as WebGL2RenderingContext, (gl as WebGL2RenderingContext).RG16F, (gl as WebGL2RenderingContext).RG, halfFloatTexType);
+        formatR = getSupportedFormat(gl as WebGL2RenderingContext, (gl as WebGL2RenderingContext).R16F, (gl as WebGL2RenderingContext).RED, halfFloatTexType);
+      } else if (gl) {
+        formatRGBA = getSupportedFormat(gl as WebGLRenderingContext, (gl as WebGLRenderingContext).RGBA, (gl as WebGLRenderingContext).RGBA, halfFloatTexType);
+        formatRG = getSupportedFormat(gl as WebGLRenderingContext, (gl as WebGLRenderingContext).RGBA, (gl as WebGLRenderingContext).RGBA, halfFloatTexType);
+        formatR = getSupportedFormat(gl as WebGLRenderingContext, (gl as WebGLRenderingContext).RGBA, (gl as WebGLRenderingContext).RGBA, halfFloatTexType);
       }
 
       return {
@@ -847,11 +849,11 @@ function SplashCursor({
     }
 
     function resizeCanvas() {
-      let width = scaleByPixelRatio(canvas.clientWidth);
-      let height = scaleByPixelRatio(canvas.clientHeight);
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width;
-        canvas.height = height;
+      let width = scaleByPixelRatio(canvasEl.clientWidth);
+      let height = scaleByPixelRatio(canvasEl.clientHeight);
+      if (canvasEl.width !== width || canvasEl.height !== height) {
+        canvasEl.width = width;
+        canvasEl.height = height;
         return true;
       }
       return false;
@@ -1018,11 +1020,11 @@ function SplashCursor({
       displayMaterial.bind();
       if (config.SHADING)
         gl.uniform2f(
-          displayMaterial.uniforms.texelSize,
+          (displayMaterial.uniforms as any).texelSize,
           1.0 / width,
           1.0 / height
         );
-      gl.uniform1i(displayMaterial.uniforms.uTexture, dye.read.attach(0));
+      gl.uniform1i((displayMaterial.uniforms as any).uTexture, dye.read.attach(0));
       blit(target);
     }
 
@@ -1047,7 +1049,7 @@ function SplashCursor({
       gl.uniform1i(splatProgram.uniforms.uTarget, velocity.read.attach(0));
       gl.uniform1f(
         splatProgram.uniforms.aspectRatio,
-        canvas.width / canvas.height
+        canvasEl.width / canvasEl.height
       );
       gl.uniform2f(splatProgram.uniforms.point, x, y);
       gl.uniform3f(splatProgram.uniforms.color, dx, dy, 0.0);
@@ -1065,7 +1067,7 @@ function SplashCursor({
     }
 
     function correctRadius(radius: any) {
-      let aspectRatio = canvas.width / canvas.height;
+  let aspectRatio = canvasEl.width / canvasEl.height;
       if (aspectRatio > 1) radius *= aspectRatio;
       return radius;
     }
@@ -1074,8 +1076,8 @@ function SplashCursor({
       pointer.id = id;
       pointer.down = true;
       pointer.moved = false;
-      pointer.texcoordX = posX / canvas.width;
-      pointer.texcoordY = 1.0 - posY / canvas.height;
+  pointer.texcoordX = posX / canvasEl.width;
+  pointer.texcoordY = 1.0 - posY / canvasEl.height;
       pointer.prevTexcoordX = pointer.texcoordX;
       pointer.prevTexcoordY = pointer.texcoordY;
       pointer.deltaX = 0;
@@ -1084,10 +1086,10 @@ function SplashCursor({
     }
 
     function updatePointerMoveData(pointer: any, posX: any, posY: any, color: any) {
-      pointer.prevTexcoordX = pointer.texcoordX;
-      pointer.prevTexcoordY = pointer.texcoordY;
-      pointer.texcoordX = posX / canvas.width;
-      pointer.texcoordY = 1.0 - posY / canvas.height;
+  pointer.prevTexcoordX = pointer.texcoordX;
+  pointer.prevTexcoordY = pointer.prevTexcoordY;
+  pointer.texcoordX = posX / canvasEl.width;
+  pointer.texcoordY = 1.0 - posY / canvasEl.height;
       pointer.deltaX = correctDeltaX(pointer.texcoordX - pointer.prevTexcoordX);
       pointer.deltaY = correctDeltaY(pointer.texcoordY - pointer.prevTexcoordY);
       pointer.moved =
@@ -1100,13 +1102,13 @@ function SplashCursor({
     }
 
     function correctDeltaX(delta: any) {
-      let aspectRatio = canvas.width / canvas.height;
-      if (aspectRatio < 1) delta *= aspectRatio;
+  let aspectRatio = canvasEl.width / canvasEl.height;
+  if (aspectRatio < 1) delta *= aspectRatio;
       return delta;
     }
 
     function correctDeltaY(delta: any) {
-      let aspectRatio = canvas.width / canvas.height;
+  let aspectRatio = canvasEl.width / canvasEl.height;
       if (aspectRatio > 1) delta /= aspectRatio;
       return delta;
     }
@@ -1282,7 +1284,6 @@ function SplashCursor({
         cancelAnimationFrame(animationId);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     SIM_RESOLUTION,
     DYE_RESOLUTION,
