@@ -1,7 +1,9 @@
+import { LandingPage } from "@/components/LandingPageComponents";
+
 export default function Home() {
   return (
     <div>
-       
+       <LandingPage/>
     </div>
   );
 }
