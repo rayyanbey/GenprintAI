@@ -38,7 +38,7 @@ export default function DesignCanvas() {
           </div>
 
           {/* Canvas/Preview Area */}
-          <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-2xl aspect-[4/3] flex items-center justify-center mb-8">
+          <div className="bg-white rounded-2xl  shadow-[0_0_40px_rgba(0,0,0,0.3)] p-8 w-full max-w-2xl aspect-[4/3] flex items-center justify-center mb-8">
             <div className="text-center text-gray-400">
               <p className="text-base">Your generated image will appear here</p>
             </div>
