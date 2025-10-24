@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 
 export default function CTASection() {
   return (
@@ -9,9 +10,9 @@ export default function CTASection() {
         <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
           Ready to Create?
         </h2>
-        <button className="px-8 py-3 bg-[#ef4444] text-white rounded-lg hover:bg-[#dc2626] transition-colors font-medium text-lg shadow-lg">
+        <Link href="/home" className="inline-block px-8 py-3 bg-[#ef4444] text-white rounded-lg hover:bg-[#dc2626] transition-colors font-medium text-lg shadow-lg">
           Start Designing
-        </button>
+        </Link>
       </div>
     </section>
   );

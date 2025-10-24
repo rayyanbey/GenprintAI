@@ -135,3 +135,7 @@ html {
 body {
   font-family: var(--font-poppins);
 }
+
+button {
+  cursor: pointer;
+}

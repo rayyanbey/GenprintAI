@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 
 export default function FeaturedProductsSection() {
   const products = [
@@ -56,9 +57,9 @@ export default function FeaturedProductsSection() {
         </div>
 
         <div className="text-center mt-12">
-          <button className="px-8 py-3 bg-[#ef4444] text-white rounded-lg hover:bg-[#dc2626] transition-colors font-medium shadow-lg">
+          <Link href="/home" className="inline-block px-8 py-3 bg-[#ef4444] text-white rounded-lg hover:bg-[#dc2626] transition-colors font-medium shadow-lg">
             Start Designing Now
-          </button>
+          </Link>
         </div>
       </div>
     </section>
