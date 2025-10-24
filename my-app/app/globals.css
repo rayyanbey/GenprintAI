@@ -127,15 +127,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-html {
-  font-family: var(--font-poppins);
-}
-
-body {
-  font-family: var(--font-poppins);
-}
-
-button {
-  cursor: pointer;
-}
