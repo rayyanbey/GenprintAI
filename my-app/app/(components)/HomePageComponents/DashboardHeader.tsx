@@ -22,11 +22,11 @@ export default function DashboardHeader() {
           <Link href="/" className="text-gray-900 font-medium transition-colors">
             Home
           </Link>
-          <Link href="/explore" className="text-gray-700 hover:text-gray-900 transition-colors">
-            Explore
+          <Link href="/products" className="text-gray-700 hover:text-gray-900 transition-colors">
+            Products
           </Link>
-          <Link href="/create" className="text-gray-700 hover:text-gray-900 transition-colors">
-            Create
+          <Link href="/design" className="text-gray-700 hover:text-gray-900 transition-colors">
+            Design
           </Link>
         </div>
 

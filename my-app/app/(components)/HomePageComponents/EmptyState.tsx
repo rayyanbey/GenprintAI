@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/dist/client/link';
 import Image from 'next/image';
 import React from 'react';
 
@@ -28,9 +29,11 @@ export default function EmptyState() {
           </p>
 
           {/* CTA Button */}
+          <Link href="/products" className="bg-[#ef4444] text-white rounded-lg hover:bg-[#dc2626] transition-colors font-medium inline-block">
           <button className="px-6 py-3 bg-[#ef4444] text-white rounded-lg hover:bg-[#dc2626] transition-colors font-medium shadow-lg">
             Create New Project
           </button>
+            </Link>
         </div>
       </div>
     </div>

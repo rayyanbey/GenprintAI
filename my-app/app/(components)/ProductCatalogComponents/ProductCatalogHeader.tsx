@@ -18,7 +18,7 @@ export default function ProductCatalogHeader() {
 
         {/* Navigation Links */}
         <div className="hidden md:flex items-center gap-8">
-          <Link href="/" className="text-gray-700 hover:text-gray-900 transition-colors">
+          <Link href="/home" className="text-gray-700 hover:text-gray-900 transition-colors">
             Home
           </Link>
           <Link href="/products" className="text-[#ef4444] font-medium transition-colors">
@@ -26,12 +26,6 @@ export default function ProductCatalogHeader() {
           </Link>
           <Link href="/design" className="text-gray-700 hover:text-gray-900 transition-colors">
             Design
-          </Link>
-          <Link href="/about" className="text-gray-700 hover:text-gray-900 transition-colors">
-            About
-          </Link>
-          <Link href="/contact" className="text-gray-700 hover:text-gray-900 transition-colors">
-            Contact
           </Link>
         </div>
 
