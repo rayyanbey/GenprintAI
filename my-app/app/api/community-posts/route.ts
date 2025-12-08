@@ -2,39 +2,27 @@ import { models, sequelize } from "@/src/db/db";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-    try{
-        const [results] = await sequelize.query(`
-        SELECT id, user_id, design_id, title, content, created_at
-        FROM community_posts
-        ORDER BY created_at DESC
-        `);
+  try {
+    const userId = "test-user-1"; // later replace with real session user
 
-        
-        return NextResponse.json({ok:true, data:results})
-    }
-    catch (err) {
-    const message =
-      err && typeof err === 'object' && 'message' in err
-        ? (err as { message?: string }).message
-        : String(err);
+    const [results] = await sequelize.query(`
+    SELECT 
+        p.*,
+        COUNT(l.id)::int as likes,
+        BOOL_OR(l.user_id = '${userId}') as "likedByMe"
+    FROM community_posts p
+    LEFT JOIN post_likes l ON p.id = l.post_id
+    GROUP BY p.id
+    ORDER BY p.created_at DESC
+    `);
 
-    console.error('Fetch community posts failed:', err);
 
-    return new NextResponse(
-      JSON.stringify({
-        ok: false,
-        message: 'Failed to fetch posts',
-        error: message,
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return NextResponse.json({ ok: true, data: results });
+  } catch (error) {
+    console.error("Fetch posts error:", error);
+    return NextResponse.json({ ok: false }, { status: 500 });
   }
-    
 }
-
 export async function POST(req: Request) {
   try {
     const body = await req.json();
