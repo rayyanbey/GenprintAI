@@ -1,7 +1,9 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
 
+class Product extends Model {}
+
 export default function ProductModel(sequelize:Sequelize) {
-  class Product extends Model {}
+  
 
   Product.init(
     {

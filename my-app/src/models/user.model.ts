@@ -1,7 +1,9 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
 
+class User extends Model {}
+
 export default function UserModel(sequelize:Sequelize) {
-  class User extends Model {}
+  
 
   User.init(
     {

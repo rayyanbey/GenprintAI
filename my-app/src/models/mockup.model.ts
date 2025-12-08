@@ -1,7 +1,9 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
 
+class Mockup extends Model {}
+
 export default function MockupModel(sequelize:Sequelize) {
-  class Mockup extends Model {}
+  
 
   Mockup.init(
     {

@@ -12,32 +12,50 @@ import { applyAssociations } from "./associations";
 
 declare global {
   var _sequelize: Sequelize | undefined;
+  var _models: any;
+  var _dbInitialized: boolean | undefined;
 }
 
-export const sequelize: Sequelize =
+// 1. Create or reuse sequelize
+export const sequelize =
   global._sequelize ??
   (global._sequelize = new Sequelize(process.env.DB_URL!, {
     dialect: "postgres",
     dialectModule: pg,
     logging: false,
     dialectOptions: {
-      ssl: { rejectUnauthorized: false },
+      ssl: {
+        require: true,
+        rejectUnauthorized: false,
+      },
     },
   }));
 
-// Initialize all models
-export const models = {
-  User: UserModel(sequelize),
-  Design: DesignModel(sequelize),
-  Template: TemplateModel(sequelize),
-  Product: ProductModel(sequelize),
-  Mockup: MockupModel(sequelize),
-  Order: OrderModel(sequelize),
-  CommunityPost: CommunityPostModel(sequelize),
-};
+// 2. Create or reuse models
+export const models =
+  global._models ??
+  (global._models = {
+    User: UserModel(sequelize),
+    Design: DesignModel(sequelize),
+    Template: TemplateModel(sequelize),
+    Product: ProductModel(sequelize),
+    Mockup: MockupModel(sequelize),
+    Order: OrderModel(sequelize),
+    CommunityPost: CommunityPostModel(sequelize),
+  });
 
-// Apply associations
-applyAssociations(models);
+// 3. Apply associations ONLY once
+if (!global._dbInitialized) {
+  applyAssociations(models);
+  global._dbInitialized = true;
+}
+
+// 4. DO NOT auto sync in Next.js
+// if (process.env.NODE_ENV !== "production") {
+//   sequelize.authenticate().then(() => {
+//     console.log("✅ DB connected");
+//   });
+// }
 
 (async () => {
   try {

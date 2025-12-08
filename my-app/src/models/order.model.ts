@@ -1,7 +1,9 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
 
+class Order extends Model {}
+
 export default function OrderModel(sequelize:Sequelize) {
-  class Order extends Model {}
+  
 
   Order.init(
     {
