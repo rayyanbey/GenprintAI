@@ -12,6 +12,15 @@ export default function ProductModel(sequelize:Sequelize) {
       name: DataTypes.STRING,
       description: DataTypes.STRING,
       category: DataTypes.STRING,
+      price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        defaultValue: 0,
+      },
+      image_url: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
     },
     {
       sequelize,
