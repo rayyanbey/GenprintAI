@@ -10,6 +10,7 @@ import OrderModel from "../models/order.model";
 import CommunityPostModel from "../models/community_post.model";
 import PostLikeModel from "../models/post_like.model";
 import DesignEmbeddingModel from "../models/design_embedding.model";
+import TrendModel from "../models/trends.model";
 import { applyAssociations } from "./associations";
 
 declare global {
@@ -46,6 +47,7 @@ export const models =
     CommunityPost: CommunityPostModel(sequelize),
     PostLike: PostLikeModel(sequelize),
     DesignEmbedding: DesignEmbeddingModel(sequelize),
+    Trend:TrendModel(sequelize),
   });
 
 // 3. Apply associations ONLY once
