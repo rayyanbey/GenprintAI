@@ -15,57 +15,6 @@ import { applyAssociations } from "./associations";
 
 declare global {
   var _sequelize: Sequelize | undefined;
-
-  var _models: any;
-  var _dbInitialized: boolean | undefined;
-}
-
-// 1. Create or reuse sequelize
-export const sequelize =
-  global._sequelize ??
-  (global._sequelize = new Sequelize(process.env.DB_URL!, {
-    dialect: "postgres",
-    dialectModule: pg,
-    logging: false,
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false,
-      },
-    },
-  }));
-
-// 2. Create or reuse models
-export const models =
-  global._models ??
-  (global._models = {
-    User: UserModel(sequelize),
-    Design: DesignModel(sequelize),
-    Template: TemplateModel(sequelize),
-    Product: ProductModel(sequelize),
-    Mockup: MockupModel(sequelize),
-    Order: OrderModel(sequelize),
-    CommunityPost: CommunityPostModel(sequelize),
-    PostLike: PostLikeModel(sequelize),
-    DesignEmbedding: DesignEmbeddingModel(sequelize),
-    Trend:TrendModel(sequelize),
-  });
-
-// 3. Apply associations ONLY once
-if (!global._dbInitialized) {
-  applyAssociations(models);
-  global._dbInitialized = true;
-}
-
-// 4. DO NOT auto sync in Next.js
-// if (process.env.NODE_ENV !== "production") {
-//   sequelize.authenticate().then(() => {
-//     console.log("✅ DB connected");
-//   });
-// }
-
-(async () => {
-
   var _models: any | undefined;
   var _dbInitialized: boolean | undefined;
 }
@@ -80,7 +29,10 @@ function getSequelize() {
       dialectModule: pg,
       logging: false,
       dialectOptions: {
-        ssl: { rejectUnauthorized: false },
+        ssl: {
+          require: true,
+          rejectUnauthorized: false,
+        },
       },
     });
     
@@ -93,15 +45,18 @@ function getSequelize() {
 
 function getModels() {
   if (!modelsCache) {
-    const sequelize = getSequelize();
+    const seq = getSequelize();
     modelsCache = global._models ?? {
-      User: UserModel(sequelize),
-      Design: DesignModel(sequelize),
-      Template: TemplateModel(sequelize),
-      Product: ProductModel(sequelize),
-      Mockup: MockupModel(sequelize),
-      Order: OrderModel(sequelize),
-      CommunityPost: CommunityPostModel(sequelize),
+      User: UserModel(seq),
+      Design: DesignModel(seq),
+      Template: TemplateModel(seq),
+      Product: ProductModel(seq),
+      Mockup: MockupModel(seq),
+      Order: OrderModel(seq),
+      CommunityPost: CommunityPostModel(seq),
+      PostLike: PostLikeModel(seq),
+      DesignEmbedding: DesignEmbeddingModel(seq),
+      Trend: TrendModel(seq),
     };
     
     if (!global._models) {
@@ -119,22 +74,19 @@ export const models = getModels();
 // Initialize database connection lazily
 async function initializeDatabase() {
   if (global._dbInitialized) return;
-
+  
   try {
-    const sequelize = getSequelize();
-    await sequelize.authenticate();
+    const seq = getSequelize();
+    await seq.authenticate();
     console.log("DB connection established.");
 
-    await sequelize.sync({ alter: true });
+    await seq.sync({ alter: true });
     console.log("Tables created/updated successfully.");
     
     global._dbInitialized = true;
   } catch (err) {
     console.error("Unable to connect to DB:", err);
   }
-
-})();
-
 }
 
 // Initialize on first import in server environment
