@@ -1,7 +1,9 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
 
+class Design extends Model {}
+
 export default function DesignModel(sequelize:Sequelize) {
-  class Design extends Model {}
+  
 
   Design.init(
     {

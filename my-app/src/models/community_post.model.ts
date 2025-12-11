@@ -1,13 +1,15 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
 
-export default function CommunityPostModel(sequelize:Sequelize) {
-  class CommunityPost extends Model {}
+class CommunityPost extends Model {}
 
+export default function CommunityPostModel(sequelize:Sequelize) {
+  
   CommunityPost.init(
     {
       id: {
-        type: DataTypes.STRING,
+        type: DataTypes.INTEGER,
         primaryKey: true,
+        autoIncrement:true,
       },
       user_id: DataTypes.STRING,
       design_id: DataTypes.STRING,
