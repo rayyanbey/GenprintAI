@@ -5,7 +5,7 @@ interface Models {
 }
 
 export function applyAssociations(models: Models) {
-  const { User, Design, Template, Product, Mockup, Order, CommunityPost, PostLike, DesignEmbedding} = models;
+  const { User, Design, Template, Product, Mockup, Order, CommunityPost, PostLike, DesignEmbedding, CartItem } = models;
 
   User.hasMany(Design, { foreignKey: "user_id" });
   Design.belongsTo(User, { foreignKey: "user_id" });
@@ -42,5 +42,15 @@ export function applyAssociations(models: Models) {
 
   Design.hasMany(DesignEmbedding, { foreignKey: "design_id" });
   DesignEmbedding.belongsTo(Design, { foreignKey: "design_id" });
+
+  // CartItem associations
+  User.hasMany(CartItem, { foreignKey: "user_id" });
+  CartItem.belongsTo(User, { foreignKey: "user_id" });
+
+  Product.hasMany(CartItem, { foreignKey: "product_id" });
+  CartItem.belongsTo(Product, { foreignKey: "product_id" });
+
+  Design.hasMany(CartItem, { foreignKey: "design_id" });
+  CartItem.belongsTo(Design, { foreignKey: "design_id" });
 
 }

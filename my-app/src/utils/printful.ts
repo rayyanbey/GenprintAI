@@ -1,10 +1,10 @@
 export const printful = async (endpoint: string, options: RequestInit = {}) => {
 
-    console.log("API",process.env.POD);
+    console.log("API",process.env.PRINTFUL);
   const res = await fetch(`https://api.printful.com/${endpoint}`, {
     ...options,
     headers: {
-      Authorization: `Bearer ${process.env.POD}`,
+      Authorization: `Bearer ${process.env.PRINTFUL}`,
       "Content-Type": "application/json",
       ...(options.headers || {}),
     },
