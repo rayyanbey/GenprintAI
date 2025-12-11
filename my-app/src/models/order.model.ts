@@ -39,6 +39,28 @@ export default function OrderModel(sequelize:Sequelize) {
         type: DataTypes.INTEGER,
         defaultValue: 1,
       },
+      // Tracking information
+      tracking_number: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      carrier: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      estimated_delivery: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      // Integration IDs
+      printful_order_id: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      payment_intent_id: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
     },
     {
       sequelize,

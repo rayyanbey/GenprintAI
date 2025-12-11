@@ -16,63 +16,54 @@ export async function POST(request: Request) {
 
     // Parse request body
     const body = await request.json();
-    const { product_id, design_id, quantity, shipping_address } = body;
+    const { items, shipping_address, total_amount } = body;
 
     // Validate required fields
-    if (!product_id) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
-        { error: 'Product ID is required' },
+        { error: 'Cart items are required' },
         { status: 400 }
       );
     }
 
     // Get database models
     const models = await getModels();
-    const { Product, Order } = models;
+    const { Order } = models;
 
-    // Fetch product details
-    const product = await Product.findByPk(product_id);
-    if (!product) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
+    // Create orders for each item (or you can create a single order with multiple items)
+    const orders = [];
+    
+    for (const item of items) {
+      const orderId = nanoid();
+      const order = await Order.create({
+        id: orderId,
+        user_id: session.user.id,
+        product_id: item.product_id,
+        design_id: item.design_id || null,
+        order_date: new Date(),
+        status: 'pending_payment',
+        total_amount: item.price * item.quantity,
+        product_name: item.name,
+        product_price: item.price,
+        product_image: item.image_url,
+        shipping_address: shipping_address ? JSON.stringify(shipping_address) : null,
+        quantity: item.quantity,
+      });
+      
+      orders.push({
+        id: order.id,
+        product_name: order.product_name,
+        quantity: order.quantity,
+        total_amount: order.total_amount,
+      });
     }
-
-    // Calculate total amount
-    const productPrice = parseFloat(product.price || 0);
-    const orderQuantity = quantity || 1;
-    const totalAmount = productPrice * orderQuantity;
-
-    // Create order
-    const orderId = nanoid();
-    const order = await Order.create({
-      id: orderId,
-      user_id: session.user.id,
-      product_id: product_id,
-      design_id: design_id || null,
-      order_date: new Date(),
-      status: 'confirmed',
-      total_amount: totalAmount,
-      product_name: product.name,
-      product_price: productPrice,
-      product_image: product.image_url,
-      shipping_address: shipping_address || null,
-      quantity: orderQuantity,
-    });
 
     return NextResponse.json(
       {
         success: true,
-        message: 'Order placed successfully',
-        order: {
-          id: order.id,
-          order_date: order.order_date,
-          status: order.status,
-          total_amount: order.total_amount,
-          product_name: order.product_name,
-          quantity: order.quantity,
-        },
+        message: 'Orders created successfully',
+        orders,
+        total_amount,
       },
       { status: 201 }
     );

@@ -7,7 +7,21 @@ import ApparelSection from './ApparelSection';
 import AccessoriesSection from './AccessoriesSection';
 import HomeLivingSection from './HomeLivingSection';
 
-export default function ProductCatalog() {
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string;
+  price: number;
+  brand: string;
+  type_name: string;
+}
+
+interface Props {
+  products?: Product[];
+}
+
+export default function ProductCatalog({ products = [] }: Props) {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -17,13 +31,13 @@ export default function ProductCatalog() {
       <ProductCatalogHero />
 
       {/* Apparel Section */}
-      <ApparelSection />
+      <ApparelSection products={products} />
 
       {/* Accessories Section */}
-      <AccessoriesSection />
+      <AccessoriesSection products={products} />
 
       {/* Home & Living Section */}
-      <HomeLivingSection />
+      <HomeLivingSection products={products} />
     </div>
   );
 }
