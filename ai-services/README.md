@@ -14,7 +14,7 @@ This folder contains a Python microservice that generates embeddings for text pr
 1. Navigate to the folder:
 
 ```bash
-cd embedding-service
+cd ai-services
 ```
 
 2. Install services

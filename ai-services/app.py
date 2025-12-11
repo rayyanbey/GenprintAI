@@ -22,12 +22,15 @@ model = SentenceTransformer("all-MiniLM-L6-v2")
 class TextRequest(BaseModel):
     text: str
 
+@app.get("/")
+def home():
+    return{"insrtuction":"add a /docs in the url to aceess the endpoints using the Swagger UI"}
+
 @app.post("/embed")
 def embed_text(req: TextRequest):
     embedding = model.encode(req.text).tolist()
     return {"embedding": embedding}
 
-# === NEW: LLaMA trend extraction endpoint ===
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 @app.post("/extract-trend")
