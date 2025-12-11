@@ -12,11 +12,33 @@ export default function OrderModel(sequelize:Sequelize) {
         primaryKey: true,
       },
       user_id: DataTypes.STRING,
-      order_date: DataTypes.DATE,
-      status: DataTypes.STRING,
-      total_amount: DataTypes.DECIMAL,
+      order_date: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+      },
+      status: {
+        type: DataTypes.STRING,
+        defaultValue: 'confirmed',
+      },
+      total_amount: DataTypes.DECIMAL(10, 2),
       product_id: DataTypes.STRING,
-      design_id: DataTypes.STRING,
+      design_id: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      // Store product details at time of order
+      product_name: DataTypes.STRING,
+      product_price: DataTypes.DECIMAL(10, 2),
+      product_image: DataTypes.TEXT,
+      // Shipping information
+      shipping_address: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      quantity: {
+        type: DataTypes.INTEGER,
+        defaultValue: 1,
+      },
     },
     {
       sequelize,
