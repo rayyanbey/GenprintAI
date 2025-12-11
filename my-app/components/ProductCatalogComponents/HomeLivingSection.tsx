@@ -3,7 +3,21 @@
 import React from 'react';
 import ProductCard from './ProductCard';
 
-export default function HomeLivingSection() {
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string;
+  price: number;
+  brand: string;
+  type_name: string;
+}
+
+interface Props {
+  products?: Product[];
+}
+
+export default function HomeLivingSection({ products = [] }: Props) {
   const homeLivingProducts = [
     {
       title: 'Custom Pillows',

@@ -23,12 +23,21 @@ declare global {
 let sequelizeInstance: Sequelize | null = null;
 let modelsCache: any = null;
 
+
 function getSequelize() {
   if (!sequelizeInstance) {
-    sequelizeInstance = global._sequelize ?? new Sequelize(process.env.DB_URL!, {
+    const dbUrl = process.env.DB_URL || process.env.DATABASE_URL;
+    
+    if (!dbUrl) {
+      throw new Error("Database URL not found. Please set DB_URL or DATABASE_URL environment variable.");
+    }
+    
+    console.log("Creating Sequelize instance with database URL...");
+    
+    sequelizeInstance = global._sequelize ?? new Sequelize(dbUrl, {
       dialect: "postgres",
       dialectModule: pg,
-      logging: false,
+      logging: (msg) => console.log("🔵 SQL:", msg), // Enable SQL logging
       dialectOptions: {
         ssl: {
           require: true,
@@ -43,6 +52,7 @@ function getSequelize() {
   }
   return sequelizeInstance;
 }
+
 
 function getModels() {
   if (!modelsCache) {
@@ -75,24 +85,39 @@ export const models = getModels();
 
 // Initialize database connection lazily
 async function initializeDatabase() {
-  if (global._dbInitialized) return;
+  if (global._dbInitialized) {
+    console.log("Database already initialized.");
+    return;
+  }
+  
+  console.log("Initializing database connection...");
   
   try {
     const seq = getSequelize();
     await seq.authenticate();
-    console.log("DB connection established.");
+    console.log("✅ DB connection established successfully.");
 
+    // Sync models with database
     await seq.sync({ alter: true });
-    console.log("Tables created/updated successfully.");
+    console.log("✅ Tables created/updated successfully.");
+    
+    // List all models
+    const modelNames = Object.keys(getModels());
+    console.log(`📊 Registered models: ${modelNames.join(', ')}`);
     
     global._dbInitialized = true;
   } catch (err) {
-    console.error("Unable to connect to DB:", err);
+    console.error("❌ Unable to connect to DB:", err);
+    throw err;
   }
 }
 
 // Initialize on first import in server environment
 if (typeof window === 'undefined') {
-  initializeDatabase();
+  initializeDatabase().catch(err => {
+    console.error("Database initialization failed:", err);
+  });
 }
+
+export { initializeDatabase };
 
