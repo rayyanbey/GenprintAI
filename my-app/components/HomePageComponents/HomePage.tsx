@@ -5,6 +5,7 @@ import DashboardHeader from './DashboardHeader';
 import DashboardHero from './DashboardHero';
 import DashboardTabs from './DashboardTabs';
 import EmptyState from './EmptyState';
+import CommunityPosts from './CommunityPosts';
 
 type TabType = 'solo' | 'collaborations' | 'community';
 
@@ -33,9 +34,9 @@ export default function HomePage() {
           </div>
         )}
         {activeTab === 'community' && (
-          <div className="w-full px-6 py-16 md:py-24 bg-gray-50">
+          <div className="w-full px-6 py-2 md:py-8 bg-gray-50">
             <div className="max-w-7xl mx-auto text-center">
-              <p className="text-gray-600">No community designs yet.</p>
+              <CommunityPosts/>
             </div>
           </div>
         )}

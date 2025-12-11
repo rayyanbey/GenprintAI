@@ -1,7 +1,9 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
 
+class Template extends Model {}
+
 export default function TemplateModel(sequelize:Sequelize) {
-  class Template extends Model {}
+  
 
   Template.init(
     {
