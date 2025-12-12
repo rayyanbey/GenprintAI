@@ -52,31 +52,42 @@ export default function DashboardHeader() {
               />
             </div>
 
-            {/* Notification Bell */}
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative" aria-label="Notifications">
-              <Bell className="w-5 h-5 text-gray-700" />
-            </button>
+            {/* Notification Bell - Only show when logged in */}
+            {session?.user && (
+              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative" aria-label="Notifications">
+                <Bell className="w-5 h-5 text-gray-700" />
+              </button>
+            )}
 
-            {/* User Avatar - Clickable */}
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="focus:outline-none focus:ring-2 focus:ring-[#f08080] rounded-full"
-              aria-label="Open profile menu"
-            >
-              <SafeAvatar
-                src={session?.user?.image}
-                alt={session?.user?.name || 'User'}
-                fallback={userInitials}
-                size="md"
-                className="cursor-pointer hover:ring-2 hover:ring-[#f08080] transition-all"
-              />
-            </button>
+            {/* User Avatar or Login Button */}
+            {session?.user ? (
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="focus:outline-none focus:ring-2 focus:ring-[#f08080] rounded-full"
+                aria-label="Open profile menu"
+              >
+                <SafeAvatar
+                  src={session?.user?.image}
+                  alt={session?.user?.name || 'User'}
+                  fallback={userInitials}
+                  size="md"
+                  className="cursor-pointer hover:ring-2 hover:ring-[#f08080] transition-all"
+                />
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="px-4 py-2 bg-gradient-to-br from-[#f08080] to-[#f4978e] hover:from-[#e07070] hover:to-[#e38878] text-white font-medium rounded-lg transition-all shadow-sm hover:shadow-md"
+              >
+                Log In
+              </Link>
+            )}
           </div>
         </nav>
       </header>
 
       {/* Profile Sidebar */}
-      <ProfileSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
+      {session?.user && <ProfileSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />}
     </>
   );
 }
