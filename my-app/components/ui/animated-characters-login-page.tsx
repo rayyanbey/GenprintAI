@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Eye, EyeOff, Mail, Sparkles } from 'lucide-react';
+import { useState, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Eye, EyeOff, Mail, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 
 interface PupilProps {
   size?: number;
@@ -35,12 +35,16 @@ const Pupil = ({
     };
 
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
   }, []);
 
   const calculatePupilPosition = () => {
     if (!pupilRef.current) return { x: 0, y: 0 };
 
+    // If forced look direction is provided, use that instead of mouse tracking
     if (forceLookX !== undefined && forceLookY !== undefined) {
       return { x: forceLookX, y: forceLookY };
     }
@@ -77,6 +81,9 @@ const Pupil = ({
   );
 };
 
+
+
+
 interface EyeBallProps {
   size?: number;
   pupilSize?: number;
@@ -109,12 +116,16 @@ const EyeBall = ({
     };
 
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
   }, []);
 
   const calculatePupilPosition = () => {
     if (!eyeRef.current) return { x: 0, y: 0 };
 
+    // If forced look direction is provided, use that instead of mouse tracking
     if (forceLookX !== undefined && forceLookY !== undefined) {
       return { x: forceLookX, y: forceLookY };
     }
@@ -163,14 +174,16 @@ const EyeBall = ({
   );
 };
 
-export default function LoginPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+
+
+
+
+function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [mouseX, setMouseX] = useState<number>(0);
   const [mouseY, setMouseY] = useState<number>(0);
   const [isPurpleBlinking, setIsPurpleBlinking] = useState(false);
@@ -182,10 +195,6 @@ export default function LoginPage() {
   const blackRef = useRef<HTMLDivElement>(null);
   const yellowRef = useRef<HTMLDivElement>(null);
   const orangeRef = useRef<HTMLDivElement>(null);
-
-  // Get messages from URL params
-  const errorParam = searchParams.get('error');
-  const messageParam = searchParams.get('message');
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -199,7 +208,7 @@ export default function LoginPage() {
 
   // Blinking effect for purple character
   useEffect(() => {
-    const getRandomBlinkInterval = () => Math.random() * 4000 + 3000;
+    const getRandomBlinkInterval = () => Math.random() * 4000 + 3000; // Random between 3-7 seconds
 
     const scheduleBlink = () => {
       const blinkTimeout = setTimeout(() => {
@@ -207,7 +216,7 @@ export default function LoginPage() {
         setTimeout(() => {
           setIsPurpleBlinking(false);
           scheduleBlink();
-        }, 150);
+        }, 150); // Blink duration 150ms
       }, getRandomBlinkInterval());
 
       return blinkTimeout;
@@ -219,7 +228,7 @@ export default function LoginPage() {
 
   // Blinking effect for black character
   useEffect(() => {
-    const getRandomBlinkInterval = () => Math.random() * 4000 + 3000;
+    const getRandomBlinkInterval = () => Math.random() * 4000 + 3000; // Random between 3-7 seconds
 
     const scheduleBlink = () => {
       const blinkTimeout = setTimeout(() => {
@@ -227,7 +236,7 @@ export default function LoginPage() {
         setTimeout(() => {
           setIsBlackBlinking(false);
           scheduleBlink();
-        }, 150);
+        }, 150); // Blink duration 150ms
       }, getRandomBlinkInterval());
 
       return blinkTimeout;
@@ -243,7 +252,7 @@ export default function LoginPage() {
       setIsLookingAtEachOther(true);
       const timer = setTimeout(() => {
         setIsLookingAtEachOther(false);
-      }, 800);
+      }, 800); // Look at each other for 1.5 seconds, then back to tracking mouse
       return () => clearTimeout(timer);
     } else {
       setIsLookingAtEachOther(false);
@@ -258,8 +267,8 @@ export default function LoginPage() {
           setIsPurplePeeking(true);
           setTimeout(() => {
             setIsPurplePeeking(false);
-          }, 800);
-        }, Math.random() * 3000 + 2000);
+          }, 800); // Peek for 800ms
+        }, Math.random() * 3000 + 2000); // Random peek every 2-5 seconds
         return peekInterval;
       };
 
@@ -271,17 +280,20 @@ export default function LoginPage() {
   }, [password, showPassword, isPurplePeeking]);
 
   const calculatePosition = (ref: React.RefObject<HTMLDivElement | null>) => {
-    if (!ref.current) return { faceX: 0, faceY: 0, bodySkew: 0 };
+    if (!ref.current) return { faceX: 0, faceY: 0, bodyRotation: 0 };
 
     const rect = ref.current.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 3;
+    const centerY = rect.top + rect.height / 3; // Focus on head area
 
     const deltaX = mouseX - centerX;
     const deltaY = mouseY - centerY;
 
+    // Face movement (limited range)
     const faceX = Math.max(-15, Math.min(15, deltaX / 20));
     const faceY = Math.max(-10, Math.min(10, deltaY / 30));
+
+    // Body lean (skew for lean while keeping bottom straight) - negative to lean towards mouse
     const bodySkew = Math.max(-6, Math.min(6, -deltaX / 120));
 
     return { faceX, faceY, bodySkew };
@@ -292,63 +304,41 @@ export default function LoginPage() {
   const yellowPos = calculatePosition(yellowRef);
   const orangePos = calculatePosition(orangeRef);
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
+    setError("");
+    setIsLoading(true);
 
-    try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      });
+    // Simulate API delay (quick)
+    await new Promise(resolve => setTimeout(resolve, 300));
 
-      if (result?.error) {
-        setError(result.error);
-        setLoading(false);
-        return;
-      }
-
-      // Check if onboarding is needed
-      const response = await fetch('/api/user/onboarding');
-      if (response.ok) {
-        const data = await response.json();
-        if (!data.user.onboarding_completed) {
-          router.push('/onboarding');
-        } else {
-          router.push('/home');
-        }
-      } else {
-        router.push('/home');
-      }
-    } catch (error: any) {
-      setError(error.message || 'An error occurred. Please try again.');
-      setLoading(false);
+    // Mock authentication - validate against dummy credentials
+    if (email === "erik@gmail.com" && password === "1234") {
+      console.log("✅ Login successful!");
+      alert("Login successful! Welcome, Erik!");
+      // In a real app, you would:
+      // - Store auth token
+      // - Redirect to dashboard
+      // - Set user session
+    } else {
+      setError("Invalid email or password. Please try again.");
+      console.log("❌ Login failed");
     }
-  };
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      await signIn('google', { 
-        callbackUrl: '/onboarding',
-        redirect: true 
-      });
-    } catch (error: any) {
-      setError('Failed to sign in with Google. Please try again.');
-      setLoading(false);
-    }
+    setIsLoading(false);
   };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      {/* Left Content Section with Animated Characters */}
-      <div className="relative hidden lg:flex flex-col justify-between bg-gradient-to-br from-[#EA7052]/90 via-[#EA7052] to-[#EA7052]/80 p-12 text-primary-foreground">
+      {/* Left Content Section */}
+      <div className="relative hidden lg:flex flex-col justify-between bg-gradient-to-br from-primary/90 via-primary to-primary/80 p-12 text-primary-foreground">
         <div className="relative z-20">
-          {/* Logo removed */}
+          <div className="flex items-center gap-2 text-lg font-semibold">
+            <div className="size-8 rounded-lg bg-primary-foreground/10 backdrop-blur-sm flex items-center justify-center">
+              <Sparkles className="size-4" />
+            </div>
+            <span>YourBrand</span>
+          </div>
         </div>
 
         <div className="relative z-20 flex items-end justify-center h-[500px]">
@@ -373,6 +363,7 @@ export default function LoginPage() {
                 transformOrigin: 'bottom center',
               }}
             >
+              {/* Eyes */}
               <div 
                 className="absolute flex gap-8 transition-all duration-700 ease-in-out"
                 style={{
@@ -424,6 +415,7 @@ export default function LoginPage() {
                 transformOrigin: 'bottom center',
               }}
             >
+              {/* Eyes */}
               <div 
                 className="absolute flex gap-6 transition-all duration-700 ease-in-out"
                 style={{
@@ -469,6 +461,7 @@ export default function LoginPage() {
                 transformOrigin: 'bottom center',
               }}
             >
+              {/* Eyes - just pupils, no white */}
               <div 
                 className="absolute flex gap-8 transition-all duration-200 ease-out"
                 style={{
@@ -496,6 +489,7 @@ export default function LoginPage() {
                 transformOrigin: 'bottom center',
               }}
             >
+              {/* Eyes - just pupils, no white */}
               <div 
                 className="absolute flex gap-6 transition-all duration-200 ease-out"
                 style={{
@@ -506,6 +500,7 @@ export default function LoginPage() {
                 <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(password.length > 0 && showPassword) ? -4 : undefined} />
                 <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(password.length > 0 && showPassword) ? -4 : undefined} />
               </div>
+              {/* Horizontal line for mouth */}
               <div 
                 className="absolute w-20 h-[4px] bg-[#2D2D2D] rounded-full transition-all duration-200 ease-out"
                 style={{
@@ -517,14 +512,22 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="relative z-20">
-          {/* Footer links removed */}
+        <div className="relative z-20 flex items-center gap-8 text-sm text-primary-foreground/60">
+          <a href="#" className="hover:text-primary-foreground transition-colors">
+            Privacy Policy
+          </a>
+          <a href="#" className="hover:text-primary-foreground transition-colors">
+            Terms of Service
+          </a>
+          <a href="#" className="hover:text-primary-foreground transition-colors">
+            Contact
+          </a>
         </div>
 
         {/* Decorative elements */}
         <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />
-        <div className="absolute top-1/4 right-1/4 size-64 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-1/4 size-96 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 right-1/4 size-64 bg-primary-foreground/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-1/4 size-96 bg-primary-foreground/5 rounded-full blur-3xl" />
       </div>
 
       {/* Right Login Section */}
@@ -532,10 +535,10 @@ export default function LoginPage() {
         <div className="w-full max-w-[420px]">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 text-lg font-semibold mb-12">
-            <div className="size-8 rounded-lg bg-[#EA7052]/10 flex items-center justify-center">
-              <Sparkles className="size-4 text-[#EA7052]" />
+            <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Sparkles className="size-4 text-primary" />
             </div>
-            <span>Genprint AI</span>
+            <span>YourBrand</span>
           </div>
 
           {/* Header */}
@@ -544,32 +547,20 @@ export default function LoginPage() {
             <p className="text-muted-foreground text-sm">Please enter your details</p>
           </div>
 
-          {/* Display URL params errors/messages */}
-          {(errorParam || messageParam) && (
-            <div
-              className={`mb-6 p-3 rounded-lg text-sm ${
-                errorParam ? 'bg-red-950/20 border border-red-900/30 text-red-400' : 'bg-green-950/20 border border-green-900/30 text-green-400'
-              }`}
-            >
-              {errorParam || messageParam}
-            </div>
-          )}
-
           {/* Login Form */}
-          <form onSubmit={handleEmailLogin} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="anna@gmail.com"
                 value={email}
                 autoComplete="off"
                 onChange={(e) => setEmail(e.target.value)}
                 onFocus={() => setIsTyping(true)}
                 onBlur={() => setIsTyping(false)}
                 required
-                disabled={loading}
                 className="h-12 bg-background border-border/60 focus:border-primary"
               />
             </div>
@@ -584,7 +575,6 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  disabled={loading}
                   className="h-12 pr-10 bg-background border-border/60 focus:border-primary"
                 />
                 <button
@@ -613,7 +603,7 @@ export default function LoginPage() {
               </div>
               <a
                 href="#"
-                className="text-sm text-[#EA7052] hover:underline font-medium"
+                className="text-sm text-primary hover:underline font-medium"
               >
                 Forgot password?
               </a>
@@ -627,11 +617,11 @@ export default function LoginPage() {
 
             <Button 
               type="submit" 
-              className="w-full h-12 text-base font-medium bg-[#EA7052] hover:bg-[#EA7052]/90" 
+              className="w-full h-12 text-base font-medium" 
               size="lg" 
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading ? "Signing in..." : "Log in"}
+              {isLoading ? "Signing in..." : "Log in"}
             </Button>
           </form>
 
@@ -641,8 +631,6 @@ export default function LoginPage() {
               variant="outline" 
               className="w-full h-12 bg-background border-border/60 hover:bg-accent"
               type="button"
-              onClick={handleGoogleLogin}
-              disabled={loading}
             >
               <Mail className="mr-2 size-5" />
               Log in with Google
@@ -651,8 +639,8 @@ export default function LoginPage() {
 
           {/* Sign Up Link */}
           <div className="text-center text-sm text-muted-foreground mt-8">
-            Don&apos;t have an account?{" "}
-            <a href="/signup" className="text-foreground font-medium hover:underline">
+            Don't have an account?{" "}
+            <a href="#" className="text-foreground font-medium hover:underline">
               Sign Up
             </a>
           </div>
@@ -661,3 +649,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
+
+
+export const Component = LoginPage;

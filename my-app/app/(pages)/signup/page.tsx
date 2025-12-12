@@ -1,11 +1,167 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Eye, EyeOff, Mail, Sparkles } from 'lucide-react';
 import { signIn } from 'next-auth/react';
+
+interface PupilProps {
+  size?: number;
+  maxDistance?: number;
+  pupilColor?: string;
+  forceLookX?: number;
+  forceLookY?: number;
+}
+
+const Pupil = ({ 
+  size = 12, 
+  maxDistance = 5,
+  pupilColor = "black",
+  forceLookX,
+  forceLookY
+}: PupilProps) => {
+  const [mouseX, setMouseX] = useState<number>(0);
+  const [mouseY, setMouseY] = useState<number>(0);
+  const pupilRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMouseX(e.clientX);
+      setMouseY(e.clientY);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  const calculatePupilPosition = () => {
+    if (!pupilRef.current) return { x: 0, y: 0 };
+
+    if (forceLookX !== undefined && forceLookY !== undefined) {
+      return { x: forceLookX, y: forceLookY };
+    }
+
+    const pupil = pupilRef.current.getBoundingClientRect();
+    const pupilCenterX = pupil.left + pupil.width / 2;
+    const pupilCenterY = pupil.top + pupil.height / 2;
+
+    const deltaX = mouseX - pupilCenterX;
+    const deltaY = mouseY - pupilCenterY;
+    const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
+
+    const angle = Math.atan2(deltaY, deltaX);
+    const x = Math.cos(angle) * distance;
+    const y = Math.sin(angle) * distance;
+
+    return { x, y };
+  };
+
+  const pupilPosition = calculatePupilPosition();
+
+  return (
+    <div
+      ref={pupilRef}
+      className="rounded-full"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        backgroundColor: pupilColor,
+        transform: `translate(${pupilPosition.x}px, ${pupilPosition.y}px)`,
+        transition: 'transform 0.1s ease-out',
+      }}
+    />
+  );
+};
+
+interface EyeBallProps {
+  size?: number;
+  pupilSize?: number;
+  maxDistance?: number;
+  eyeColor?: string;
+  pupilColor?: string;
+  isBlinking?: boolean;
+  forceLookX?: number;
+  forceLookY?: number;
+}
+
+const EyeBall = ({ 
+  size = 48, 
+  pupilSize = 16, 
+  maxDistance = 10,
+  eyeColor = "white",
+  pupilColor = "black",
+  isBlinking = false,
+  forceLookX,
+  forceLookY
+}: EyeBallProps) => {
+  const [mouseX, setMouseX] = useState<number>(0);
+  const [mouseY, setMouseY] = useState<number>(0);
+  const eyeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMouseX(e.clientX);
+      setMouseY(e.clientY);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  const calculatePupilPosition = () => {
+    if (!eyeRef.current) return { x: 0, y: 0 };
+
+    if (forceLookX !== undefined && forceLookY !== undefined) {
+      return { x: forceLookX, y: forceLookY };
+    }
+
+    const eye = eyeRef.current.getBoundingClientRect();
+    const eyeCenterX = eye.left + eye.width / 2;
+    const eyeCenterY = eye.top + eye.height / 2;
+
+    const deltaX = mouseX - eyeCenterX;
+    const deltaY = mouseY - eyeCenterY;
+    const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
+
+    const angle = Math.atan2(deltaY, deltaX);
+    const x = Math.cos(angle) * distance;
+    const y = Math.sin(angle) * distance;
+
+    return { x, y };
+  };
+
+  const pupilPosition = calculatePupilPosition();
+
+  return (
+    <div
+      ref={eyeRef}
+      className="rounded-full flex items-center justify-center transition-all duration-150"
+      style={{
+        width: `${size}px`,
+        height: isBlinking ? '2px' : `${size}px`,
+        backgroundColor: eyeColor,
+        overflow: 'hidden',
+      }}
+    >
+      {!isBlinking && (
+        <div
+          className="rounded-full"
+          style={{
+            width: `${pupilSize}px`,
+            height: `${pupilSize}px`,
+            backgroundColor: pupilColor,
+            transform: `translate(${pupilPosition.x}px, ${pupilPosition.y}px)`,
+            transition: 'transform 0.1s ease-out',
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
 export default function SignupPage() {
   const router = useRouter();
@@ -18,6 +174,124 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [mouseX, setMouseX] = useState<number>(0);
+  const [mouseY, setMouseY] = useState<number>(0);
+  const [isPurpleBlinking, setIsPurpleBlinking] = useState(false);
+  const [isBlackBlinking, setIsBlackBlinking] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false);
+  const [isPurplePeeking, setIsPurplePeeking] = useState(false);
+  const purpleRef = useRef<HTMLDivElement>(null);
+  const blackRef = useRef<HTMLDivElement>(null);
+  const yellowRef = useRef<HTMLDivElement>(null);
+  const orangeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMouseX(e.clientX);
+      setMouseY(e.clientY);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  // Blinking effect for purple character
+  useEffect(() => {
+    const getRandomBlinkInterval = () => Math.random() * 4000 + 3000;
+
+    const scheduleBlink = () => {
+      const blinkTimeout = setTimeout(() => {
+        setIsPurpleBlinking(true);
+        setTimeout(() => {
+          setIsPurpleBlinking(false);
+          scheduleBlink();
+        }, 150);
+      }, getRandomBlinkInterval());
+
+      return blinkTimeout;
+    };
+
+    const timeout = scheduleBlink();
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // Blinking effect for black character
+  useEffect(() => {
+    const getRandomBlinkInterval = () => Math.random() * 4000 + 3000;
+
+    const scheduleBlink = () => {
+      const blinkTimeout = setTimeout(() => {
+        setIsBlackBlinking(true);
+        setTimeout(() => {
+          setIsBlackBlinking(false);
+          scheduleBlink();
+        }, 150);
+      }, getRandomBlinkInterval());
+
+      return blinkTimeout;
+    };
+
+    const timeout = scheduleBlink();
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // Looking at each other animation when typing starts
+  useEffect(() => {
+    if (isTyping) {
+      setIsLookingAtEachOther(true);
+      const timer = setTimeout(() => {
+        setIsLookingAtEachOther(false);
+      }, 800);
+      return () => clearTimeout(timer);
+    } else {
+      setIsLookingAtEachOther(false);
+    }
+  }, [isTyping]);
+
+  // Purple sneaky peeking animation when typing password and it's visible
+  useEffect(() => {
+    if (formData.password.length > 0 && showPassword) {
+      const schedulePeek = () => {
+        const peekInterval = setTimeout(() => {
+          setIsPurplePeeking(true);
+          setTimeout(() => {
+            setIsPurplePeeking(false);
+          }, 800);
+        }, Math.random() * 3000 + 2000);
+        return peekInterval;
+      };
+
+      const firstPeek = schedulePeek();
+      return () => clearTimeout(firstPeek);
+    } else {
+      setIsPurplePeeking(false);
+    }
+  }, [formData.password, showPassword, isPurplePeeking]);
+
+  const calculatePosition = (ref: React.RefObject<HTMLDivElement | null>) => {
+    if (!ref.current) return { faceX: 0, faceY: 0, bodySkew: 0 };
+
+    const rect = ref.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 3;
+
+    const deltaX = mouseX - centerX;
+    const deltaY = mouseY - centerY;
+
+    const faceX = Math.max(-15, Math.min(15, deltaX / 20));
+    const faceY = Math.max(-10, Math.min(10, deltaY / 30));
+    const bodySkew = Math.max(-6, Math.min(6, -deltaX / 120));
+
+    return { faceX, faceY, bodySkew };
+  };
+
+  const purplePos = calculatePosition(purpleRef);
+  const blackPos = calculatePosition(blackRef);
+  const yellowPos = calculatePosition(yellowRef);
+  const orangePos = calculatePosition(orangeRef);
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,179 +404,339 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen relative flex gap-3 flex-col justify-between px-16 overflow-hidden" style={{ backgroundColor: '#E8E2DC' }}>
-      <div className="flex-1 mt-5">
-        <h1 className="text-5xl font-bold mb-6 mt-4">
-          <span style={{ color: '#EA7052' }}>Genprint</span>{' '}
-          <span style={{ color: '#1A1A2E' }}>AI</span>
-        </h1>
-        <p className="text-xl italic" style={{ color: '#4A5568', maxWidth: '500px' }}>
-          Unleash your creativity. We bring your unique designs to life on high-quality merchandise.
-        </p>
-      </div>
-
-      <div className="flex-1 flex justify-start mb-5">
-        <div
-          className="bg-white rounded-lg p-12 shadow-lg"
-          style={{
-            width: '480px',
-            border: '3px solid #EA7052'
-          }}
-        >
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-2" style={{ color: '#1A1A2E' }}>
-              Create Your Account
-            </h2>
-            <p className="text-gray-600">Join the future of custom merch.</p>
+    <div className="min-h-screen grid lg:grid-cols-2">
+      {/* Left Signup Form Section */}
+      <div className="flex items-center justify-center p-8 bg-background">
+        <div className="w-full max-w-[420px]">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center justify-center gap-2 text-lg font-semibold mb-12">
+            <div className="size-8 rounded-lg bg-[#EA7052]/10 flex items-center justify-center">
+              <Sparkles className="size-4 text-[#EA7052]" />
+            </div>
+            <span>Genprint AI</span>
           </div>
 
-          {error && (
-            <div className="mb-6 p-4 rounded-lg bg-red-100 text-red-700">
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-4 mb-6">
-            <Button
-              variant="outline"
-              className="w-full h-12 text-base font-medium"
-              style={{ borderColor: '#D1D5DB' }}
-              onClick={handleGoogleSignup}
-              disabled={loading}
-            >
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              Sign up with Google
-            </Button>
+          {/* Header */}
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-bold tracking-tight mb-2">Create Your Account</h1>
+            <p className="text-muted-foreground text-sm">Join the future of custom merch</p>
           </div>
 
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t" style={{ borderColor: '#E5E7EB' }}></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">Or</span>
-            </div>
-          </div>
-
-          <form onSubmit={handleEmailSignup} className="space-y-4">
-            <div>
-              <Label htmlFor="username" className="text-sm font-medium" style={{ color: '#1A1A2E' }}>
-                Username
-              </Label>
+          {/* Signup Form */}
+          <form onSubmit={handleEmailSignup} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-sm font-medium">Username</Label>
               <Input
                 id="username"
                 type="text"
                 placeholder="johndoe"
                 value={formData.username}
+                autoComplete="off"
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="mt-1 h-12"
+                onFocus={() => setIsTyping(true)}
+                onBlur={() => setIsTyping(false)}
                 required
                 disabled={loading}
                 minLength={3}
+                className="h-12 bg-background border-border/60 focus:border-primary"
               />
             </div>
 
-            <div>
-              <Label htmlFor="email" className="text-sm font-medium" style={{ color: '#1A1A2E' }}>
-                Email
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
                 value={formData.email}
+                autoComplete="off"
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="mt-1 h-12"
+                onFocus={() => setIsTyping(true)}
+                onBlur={() => setIsTyping(false)}
                 required
                 disabled={loading}
+                className="h-12 bg-background border-border/60 focus:border-primary"
               />
             </div>
 
-            <div>
-              <Label htmlFor="password" className="text-sm font-medium" style={{ color: '#1A1A2E' }}>
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="mt-1 h-12"
-                required
-                disabled={loading}
-                minLength={8}
-              />
-              <p className="text-xs text-gray-500 mt-1">
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  disabled={loading}
+                  minLength={8}
+                  className="h-12 pr-10 bg-background border-border/60 focus:border-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-5" />
+                  ) : (
+                    <Eye className="size-5" />
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
                 At least 8 characters with uppercase, lowercase, and number
               </p>
             </div>
 
-            <div>
-              <Label htmlFor="confirmPassword" className="text-sm font-medium" style={{ color: '#1A1A2E' }}>
-                Confirm Password
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className="mt-1 h-12"
-                required
-                disabled={loading}
-              />
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  required
+                  disabled={loading}
+                  className="h-12 pr-10 bg-background border-border/60 focus:border-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="size-5" />
+                  ) : (
+                    <Eye className="size-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
-            <Button
-              type="submit"
+            {error && (
+              <div className="p-3 text-sm text-red-400 bg-red-950/20 border border-red-900/30 rounded-lg">
+                {error}
+              </div>
+            )}
+
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-base font-medium bg-[#EA7052] hover:bg-[#EA7052]/90" 
+              size="lg" 
               disabled={loading}
-              className="w-full h-12 text-base font-semibold text-white"
-              style={{
-                backgroundColor: loading ? '#9CA3AF' : '#EA7052',
-                boxShadow: '0 4px 6px rgba(234, 112, 82, 0.3)'
-              }}
             >
-              {loading ? 'Creating Account...' : 'Sign Up'}
+              {loading ? "Creating Account..." : "Sign Up"}
             </Button>
           </form>
 
-          <p className="text-center mt-6 text-gray-600">
-            Already have an account?{' '}
-            <a href="/login" className="font-semibold" style={{ color: '#EA7052' }}>
-              Log in
+          {/* Social Signup */}
+          <div className="mt-6">
+            <Button 
+              variant="outline" 
+              className="w-full h-12 bg-background border-border/60 hover:bg-accent"
+              type="button"
+              onClick={handleGoogleSignup}
+              disabled={loading}
+            >
+              <Mail className="mr-2 size-5" />
+              Sign up with Google
+            </Button>
+          </div>
+
+          {/* Login Link */}
+          <div className="text-center text-sm text-muted-foreground mt-8">
+            Already have an account?{" "}
+            <a href="/login" className="text-foreground font-medium hover:underline">
+              Log In
             </a>
-          </p>
+          </div>
         </div>
       </div>
-      
-      {/* Right-side large image placeholder */}
-      <div className="hidden lg:block absolute top-0 right-0 h-full w-1/2 pointer-events-none">
-        <div
-          className="h-full w-full bg-cover bg-center rounded-l-md"
-          style={{
-            backgroundImage: "url('/login.jpg')",
-            backgroundColor: '#efe9e4'
-          }}
-          aria-hidden
-        />
+
+      {/* Right Content Section with Animated Characters */}
+      <div className="relative hidden lg:flex flex-col justify-between bg-gradient-to-br from-[#EA7052]/90 via-[#EA7052] to-[#EA7052]/80 p-12 text-white">
+        <div className="relative z-20">
+          {/* Logo removed */}
+        </div>
+
+        <div className="relative z-20 flex items-end justify-center h-[500px]">
+          {/* Cartoon Characters */}
+          <div className="relative" style={{ width: '550px', height: '400px' }}>
+            {/* Purple tall rectangle character - Back layer */}
+            <div 
+              ref={purpleRef}
+              className="absolute bottom-0 transition-all duration-700 ease-in-out"
+              style={{
+                left: '70px',
+                width: '180px',
+                height: (isTyping || (formData.password.length > 0 && !showPassword)) ? '440px' : '400px',
+                backgroundColor: '#6C3FF5',
+                borderRadius: '10px 10px 0 0',
+                zIndex: 1,
+                transform: (formData.password.length > 0 && showPassword)
+                  ? `skewX(0deg)`
+                  : (isTyping || (formData.password.length > 0 && !showPassword))
+                    ? `skewX(${(purplePos.bodySkew || 0) - 12}deg) translateX(40px)` 
+                    : `skewX(${purplePos.bodySkew || 0}deg)`,
+                transformOrigin: 'bottom center',
+              }}
+            >
+              <div 
+                className="absolute flex gap-8 transition-all duration-700 ease-in-out"
+                style={{
+                  left: (formData.password.length > 0 && showPassword) ? `${20}px` : isLookingAtEachOther ? `${55}px` : `${45 + purplePos.faceX}px`,
+                  top: (formData.password.length > 0 && showPassword) ? `${35}px` : isLookingAtEachOther ? `${65}px` : `${40 + purplePos.faceY}px`,
+                }}
+              >
+                <EyeBall 
+                  size={18} 
+                  pupilSize={7} 
+                  maxDistance={5} 
+                  eyeColor="white" 
+                  pupilColor="#2D2D2D" 
+                  isBlinking={isPurpleBlinking}
+                  forceLookX={(formData.password.length > 0 && showPassword) ? (isPurplePeeking ? 4 : -4) : isLookingAtEachOther ? 3 : undefined}
+                  forceLookY={(formData.password.length > 0 && showPassword) ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined}
+                />
+                <EyeBall 
+                  size={18} 
+                  pupilSize={7} 
+                  maxDistance={5} 
+                  eyeColor="white" 
+                  pupilColor="#2D2D2D" 
+                  isBlinking={isPurpleBlinking}
+                  forceLookX={(formData.password.length > 0 && showPassword) ? (isPurplePeeking ? 4 : -4) : isLookingAtEachOther ? 3 : undefined}
+                  forceLookY={(formData.password.length > 0 && showPassword) ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined}
+                />
+              </div>
+            </div>
+
+            {/* Black tall rectangle character - Middle layer */}
+            <div 
+              ref={blackRef}
+              className="absolute bottom-0 transition-all duration-700 ease-in-out"
+              style={{
+                left: '240px',
+                width: '120px',
+                height: '310px',
+                backgroundColor: '#2D2D2D',
+                borderRadius: '8px 8px 0 0',
+                zIndex: 2,
+                transform: (formData.password.length > 0 && showPassword)
+                  ? `skewX(0deg)`
+                  : isLookingAtEachOther
+                    ? `skewX(${(blackPos.bodySkew || 0) * 1.5 + 10}deg) translateX(20px)`
+                    : (isTyping || (formData.password.length > 0 && !showPassword))
+                      ? `skewX(${(blackPos.bodySkew || 0) * 1.5}deg)` 
+                      : `skewX(${blackPos.bodySkew || 0}deg)`,
+                transformOrigin: 'bottom center',
+              }}
+            >
+              <div 
+                className="absolute flex gap-6 transition-all duration-700 ease-in-out"
+                style={{
+                  left: (formData.password.length > 0 && showPassword) ? `${10}px` : isLookingAtEachOther ? `${32}px` : `${26 + blackPos.faceX}px`,
+                  top: (formData.password.length > 0 && showPassword) ? `${28}px` : isLookingAtEachOther ? `${12}px` : `${32 + blackPos.faceY}px`,
+                }}
+              >
+                <EyeBall 
+                  size={16} 
+                  pupilSize={6} 
+                  maxDistance={4} 
+                  eyeColor="white" 
+                  pupilColor="#2D2D2D" 
+                  isBlinking={isBlackBlinking}
+                  forceLookX={(formData.password.length > 0 && showPassword) ? -4 : isLookingAtEachOther ? 0 : undefined}
+                  forceLookY={(formData.password.length > 0 && showPassword) ? -4 : isLookingAtEachOther ? -4 : undefined}
+                />
+                <EyeBall 
+                  size={16} 
+                  pupilSize={6} 
+                  maxDistance={4} 
+                  eyeColor="white" 
+                  pupilColor="#2D2D2D" 
+                  isBlinking={isBlackBlinking}
+                  forceLookX={(formData.password.length > 0 && showPassword) ? -4 : isLookingAtEachOther ? 0 : undefined}
+                  forceLookY={(formData.password.length > 0 && showPassword) ? -4 : isLookingAtEachOther ? -4 : undefined}
+                />
+              </div>
+            </div>
+
+            {/* Orange semi-circle character - Front left */}
+            <div 
+              ref={orangeRef}
+              className="absolute bottom-0 transition-all duration-700 ease-in-out"
+              style={{
+                left: '0px',
+                width: '240px',
+                height: '200px',
+                zIndex: 3,
+                backgroundColor: '#FF9B6B',
+                borderRadius: '120px 120px 0 0',
+                transform: (formData.password.length > 0 && showPassword) ? `skewX(0deg)` : `skewX(${orangePos.bodySkew || 0}deg)`,
+                transformOrigin: 'bottom center',
+              }}
+            >
+              <div 
+                className="absolute flex gap-8 transition-all duration-200 ease-out"
+                style={{
+                  left: (formData.password.length > 0 && showPassword) ? `${50}px` : `${82 + (orangePos.faceX || 0)}px`,
+                  top: (formData.password.length > 0 && showPassword) ? `${85}px` : `${90 + (orangePos.faceY || 0)}px`,
+                }}
+              >
+                <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={(formData.password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(formData.password.length > 0 && showPassword) ? -4 : undefined} />
+                <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={(formData.password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(formData.password.length > 0 && showPassword) ? -4 : undefined} />
+              </div>
+            </div>
+
+            {/* Yellow tall rectangle character - Front right */}
+            <div 
+              ref={yellowRef}
+              className="absolute bottom-0 transition-all duration-700 ease-in-out"
+              style={{
+                left: '310px',
+                width: '140px',
+                height: '230px',
+                backgroundColor: '#E8D754',
+                borderRadius: '70px 70px 0 0',
+                zIndex: 4,
+                transform: (formData.password.length > 0 && showPassword) ? `skewX(0deg)` : `skewX(${yellowPos.bodySkew || 0}deg)`,
+                transformOrigin: 'bottom center',
+              }}
+            >
+              <div 
+                className="absolute flex gap-6 transition-all duration-200 ease-out"
+                style={{
+                  left: (formData.password.length > 0 && showPassword) ? `${20}px` : `${52 + (yellowPos.faceX || 0)}px`,
+                  top: (formData.password.length > 0 && showPassword) ? `${35}px` : `${40 + (yellowPos.faceY || 0)}px`,
+                }}
+              >
+                <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={(formData.password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(formData.password.length > 0 && showPassword) ? -4 : undefined} />
+                <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={(formData.password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(formData.password.length > 0 && showPassword) ? -4 : undefined} />
+              </div>
+              <div 
+                className="absolute w-20 h-[4px] bg-[#2D2D2D] rounded-full transition-all duration-200 ease-out"
+                style={{
+                  left: (formData.password.length > 0 && showPassword) ? `${10}px` : `${40 + (yellowPos.faceX || 0)}px`,
+                  top: (formData.password.length > 0 && showPassword) ? `${88}px` : `${88 + (yellowPos.faceY || 0)}px`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-20">
+          {/* Footer links removed */}
+        </div>
+
+        {/* Decorative elements */}
+        <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />
+        <div className="absolute top-1/4 right-1/4 size-64 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-1/4 size-96 bg-white/5 rounded-full blur-3xl" />
       </div>
     </div>
   );

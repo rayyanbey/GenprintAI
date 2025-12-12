@@ -40,10 +40,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         });
 
         if (!user) {
+          console.log(`[AUTH] User not found for email: ${credentials.email}`);
           throw new Error("Invalid email or password");
         }
 
         const userData = user.get({ plain: true }) as any;
+        console.log(`[AUTH] User found: ${userData.email}, verified: ${userData.email_verified}, has password: ${!!userData.password_hash}`);
 
         // Check if user has a password (not OAuth user)
         if (!userData.password_hash) {
@@ -61,13 +63,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           userData.password_hash
         );
 
+        console.log(`[AUTH] Password validation result: ${isPasswordValid}`);
+
         if (!isPasswordValid) {
           throw new Error("Invalid email or password");
         }
 
         // Update last login
-        const modelsForUpdate = await getModels();
-        await modelsForUpdate.User.update(
+        await models.User.update(
           { last_login: new Date() },
           { where: { id: userData.id } }
         );
