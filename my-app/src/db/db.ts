@@ -37,7 +37,7 @@ function getSequelize() {
     sequelizeInstance = global._sequelize ?? new Sequelize(dbUrl, {
       dialect: "postgres",
       dialectModule: pg,
-      logging: (msg) => console.log("🔵 SQL:", msg), // Enable SQL logging
+      logging: process.env.NODE_ENV === 'development' ? console.log : false, // Disable SQL logging in production
       dialectOptions: {
         ssl: {
           require: true,
@@ -97,9 +97,12 @@ async function initializeDatabase() {
     await seq.authenticate();
     console.log("✅ DB connection established successfully.");
 
-    // Sync models with database
-    await seq.sync({ alter: true });
-    console.log("✅ Tables created/updated successfully.");
+    // Sync models with database (only in development)
+    // In production, use migrations instead
+    if (process.env.NODE_ENV === 'development') {
+      await seq.sync({ alter: true });
+      console.log("✅ Tables synced in development mode.");
+    }
     
     // List all models
     const modelNames = Object.keys(getModels());
