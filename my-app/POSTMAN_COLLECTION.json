@@ -1,0 +1,585 @@
+{
+  "info": {
+    "name": "GenprintAI Backend - Phase 1-3 Testing",
+    "description": "Collection for testing new Product, Template, and Mockup endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "🔧 Setup & Configuration",
+      "item": [
+        {
+          "name": "Set Environment Variables",
+          "description": "Instructions for setting up Postman environment variables",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://localhost:3000",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "3000"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Products",
+      "item": [
+        {
+          "name": "GET - List Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/products?category=apparel&minPrice=10&maxPrice=100&page=1&limit=12",
+              "host": ["{{base_url}}", "api", "products"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "apparel",
+                  "description": "Filter by category (apparel, accessories, home_living, etc)"
+                },
+                {
+                  "key": "minPrice",
+                  "value": "10",
+                  "description": "Minimum price filter (optional)"
+                },
+                {
+                  "key": "maxPrice",
+                  "value": "100",
+                  "description": "Maximum price filter (optional)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "12",
+                  "description": "Number of products per page"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{base_url}}/api/products?page=1&limit=12"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"products\": [\n    {\n      \"id\": \"uuid-here\",\n      \"printful_product_id\": 1,\n      \"name\": \"T-Shirt\",\n      \"category\": \"apparel\",\n      \"description\": \"Premium cotton t-shirt\",\n      \"price\": 25.99\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"total_pages\": 5,\n    \"total_count\": 50\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET - Get Product Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/products/{{product_id}}",
+              "host": ["{{base_url}}", "api", "products", "{{product_id}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"product\": {\n    \"id\": \"uuid-here\",\n    \"printful_product_id\": 1,\n    \"name\": \"T-Shirt\",\n    \"category\": \"apparel\",\n    \"description\": \"Premium cotton t-shirt\",\n    \"price\": 25.99,\n    \"variants\": [\n      {\n        \"id\": \"uuid\",\n        \"size\": \"S\",\n        \"color\": \"Black\",\n        \"price\": 25.99,\n        \"availability\": true\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET - Get Product Variants",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/products/{{product_id}}/variants",
+              "host": ["{{base_url}}", "api", "products", "{{product_id}}", "variants"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"variants\": [\n    {\n      \"id\": \"uuid\",\n      \"printful_variant_id\": 100,\n      \"name\": \"T-Shirt - Black - S\",\n      \"size\": \"S\",\n      \"color\": \"Black\",\n      \"price\": 25.99,\n      \"availability\": true,\n      \"sku\": \"TS-BLK-S\"\n    },\n    {\n      \"id\": \"uuid\",\n      \"printful_variant_id\": 101,\n      \"name\": \"T-Shirt - Black - M\",\n      \"size\": \"M\",\n      \"color\": \"Black\",\n      \"price\": 25.99,\n      \"availability\": true,\n      \"sku\": \"TS-BLK-M\"\n    }\n  ],\n  \"count\": 2\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST - Sync Products from Printful",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"limit\": 50\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/products/sync",
+              "host": ["{{base_url}}", "api", "products", "sync"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"synced_count\": 25,\n  \"message\": \"Successfully synced 25 products from Printful\",\n  \"products\": [\n    {\n      \"id\": \"uuid\",\n      \"printful_product_id\": 1,\n      \"name\": \"T-Shirt\",\n      \"variants_synced\": 8\n    }\n  ]\n}"
+            },
+            {
+              "name": "Unauthorized",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"success\": false,\n  \"error\": \"Unauthorized - must be logged in\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🎨 Templates",
+      "item": [
+        {
+          "name": "GET - List Templates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/templates?page=1&limit=12",
+              "host": ["{{base_url}}", "api", "templates"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "12"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"templates\": [\n    {\n      \"id\": \"uuid\",\n      \"name\": \"Retro Neon Design\",\n      \"category\": \"apparel\",\n      \"description\": \"Bold retro neon colors template\",\n      \"is_community\": false,\n      \"usage_count\": 150,\n      \"approval_status\": \"approved\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"total_pages\": 3,\n    \"total_count\": 25\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET - Template by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/templates/{{template_id}}",
+              "host": ["{{base_url}}", "api", "templates", "{{template_id}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"template\": {\n    \"id\": \"uuid\",\n    \"name\": \"Retro Neon Design\",\n    \"category\": \"apparel\",\n    \"description\": \"Bold retro neon colors template\",\n    \"color_variants\": [\"#FF006E\", \"#00D9FF\", \"#FFD60A\"],\n    \"is_community\": false,\n    \"usage_count\": 150,\n    \"approval_status\": \"approved\",\n    \"printful_template_id\": \"pt_123\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET - Templates by Category",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/templates/category/apparel?page=1&limit=12",
+              "host": ["{{base_url}}", "api", "templates", "category", "apparel"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "12"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST - Create Community Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Custom Template\",\n  \"category\": \"apparel\",\n  \"description\": \"A unique template created by community user\",\n  \"color_variants\": [\"#000000\", \"#FFFFFF\", \"#FF0000\"],\n  \"design_data\": {\n    \"elements\": [],\n    \"background\": \"white\"\n  },\n  \"metadata\": {\n    \"tags\": [\"custom\", \"minimalist\"]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/templates",
+              "host": ["{{base_url}}", "api", "templates"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"template\": {\n    \"id\": \"uuid\",\n    \"name\": \"My Custom Template\",\n    \"status\": \"pending\",\n    \"message\": \"Template submitted for approval\"\n  }\n}"
+            },
+            {
+              "name": "Unauthorized",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"success\": false,\n  \"error\": \"Unauthorized - must be logged in\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST - Track Template Usage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"design_id\": \"{{design_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/templates/{{template_id}}",
+              "host": ["{{base_url}}", "api", "templates", "{{template_id}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Template usage tracked\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "👁️ Mockups",
+      "item": [
+        {
+          "name": "POST - Generate Mockup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"{{product_id}}\",\n  \"design_id\": \"{{design_id}}\",\n  \"layer_position\": \"front\",\n  \"display_size\": \"high_res\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mockups",
+              "host": ["{{base_url}}", "api", "mockups"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"mockup\": {\n    \"id\": \"uuid\",\n    \"image_url\": \"https://mockup-image-url.jpg\",\n    \"layer_position\": \"front\",\n    \"display_size\": \"high_res\",\n    \"generated_at\": \"2026-03-23T10:30:00Z\"\n  }\n}"
+            },
+            {
+              "name": "Unauthorized",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"success\": false,\n  \"error\": \"Unauthorized - must be logged in\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET - Get Mockup",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mockups/{{mockup_id}}",
+              "host": ["{{base_url}}", "api", "mockups", "{{mockup_id}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"mockup\": {\n    \"id\": \"uuid\",\n    \"product_id\": \"uuid\",\n    \"design_id\": \"uuid\",\n    \"image_url\": \"https://mockup-image-url.jpg\",\n    \"layer_position\": \"front\",\n    \"display_size\": \"high_res\",\n    \"generated_at\": \"2026-03-23T10:30:00Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST - Generate All Mockup Angles",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"design_id\": \"{{design_id}}\",\n  \"display_size\": \"high_res\",\n  \"include_video\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mockups/{{product_id}}/all",
+              "host": ["{{base_url}}", "api", "mockups", "{{product_id}}", "all"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"mockups\": [\n    {\n      \"id\": \"uuid\",\n      \"image_url\": \"https://mockup-front.jpg\",\n      \"layer_position\": \"front\"\n    },\n    {\n      \"id\": \"uuid\",\n      \"image_url\": \"https://mockup-back.jpg\",\n      \"layer_position\": \"back\"\n    },\n    {\n      \"id\": \"uuid\",\n      \"image_url\": \"https://mockup-side.jpg\",\n      \"layer_position\": \"side\"\n    }\n  ],\n  \"message\": \"Generated 3 mockup angles\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🛡️ Admin",
+      "item": [
+        {
+          "name": "GET - Pending Community Templates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/templates?page=1&limit=20",
+              "host": ["{{base_url}}", "api", "admin", "templates"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"pending_templates\": [\n    {\n      \"id\": \"uuid\",\n      \"name\": \"User Submitted Template\",\n      \"created_by\": \"user_uuid\",\n      \"created_at\": \"2026-03-23T08:00:00Z\",\n      \"category\": \"apparel\",\n      \"description\": \"Community template awaiting approval\"\n    }\n  ],\n  \"count\": 1\n}"
+            }
+          ]
+        },
+        {
+          "name": "PUT - Approve Template",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"approve\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/templates/{{template_id}}",
+              "host": ["{{base_url}}", "api", "admin", "templates", "{{template_id}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Template approved successfully\",\n  \"template\": {\n    \"id\": \"uuid\",\n    \"name\": \"User Submitted Template\",\n    \"approval_status\": \"approved\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "PUT - Reject Template",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"reject\",\n  \"reason\": \"Does not meet quality standards\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/templates/{{template_id}}",
+              "host": ["{{base_url}}", "api", "admin", "templates", "{{template_id}}"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Template rejected\",\n  \"template\": {\n    \"id\": \"uuid\",\n    \"approval_status\": \"rejected\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "your-auth-token-here",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "your-admin-token-here",
+      "type": "string"
+    },
+    {
+      "key": "product_id",
+      "value": "your-product-id-here",
+      "type": "string"
+    },
+    {
+      "key": "template_id",
+      "value": "your-template-id-here",
+      "type": "string"
+    },
+    {
+      "key": "design_id",
+      "value": "your-design-id-here",
+      "type": "string"
+    },
+    {
+      "key": "mockup_id",
+      "value": "your-mockup-id-here",
+      "type": "string"
+    }
+  ]
+}

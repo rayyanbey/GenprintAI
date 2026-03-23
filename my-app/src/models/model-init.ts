@@ -6,12 +6,13 @@ import MockupModel from "@/src/models/mockup.model";
 import OrderModel from "@/src/models/order.model";
 import CommunityPostModel from "@/src/models/community_post.model";
 import CartItemModel from "@/src/models/cart_item.model";
-
+import ProductVariantModel from "@/src/models/product_variant.model";
+import TemplateUsageModel from "@/src/models/template_usage.model";
 
 import { applyAssociations } from "@/src/db/associations";
 import { Sequelize } from "sequelize";
 
-export function initModels(sequelize:Sequelize) {
+export function initModels(sequelize: Sequelize) {
   const models = {
     User: UserModel(sequelize),
     Design: DesignModel(sequelize),
@@ -21,8 +22,9 @@ export function initModels(sequelize:Sequelize) {
     Order: OrderModel(sequelize),
     CommunityPost: CommunityPostModel(sequelize),
     CartItem: CartItemModel(sequelize),
+    ProductVariant: ProductVariantModel(sequelize),
+    TemplateUsage: TemplateUsageModel(sequelize),
   };
-
 
   applyAssociations(models);
 

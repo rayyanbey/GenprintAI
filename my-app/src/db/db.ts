@@ -12,6 +12,8 @@ import PostLikeModel from "../models/post_like.model";
 import DesignEmbeddingModel from "../models/design_embedding.model";
 import TrendModel from "../models/trends.model";
 import CartItemModel from "../models/cart_item.model";
+import ProductVariantModel from "../models/product_variant.model";
+import TemplateUsageModel from "../models/template_usage.model";
 import { applyAssociations } from "./associations";
 
 declare global {
@@ -69,6 +71,8 @@ function getModels() {
       DesignEmbedding: DesignEmbeddingModel(seq),
       Trend: TrendModel(seq),
       CartItem: CartItemModel(seq),
+      ProductVariant: ProductVariantModel(seq),
+      TemplateUsage: TemplateUsageModel(seq),
     };
     
     if (!global._models) {

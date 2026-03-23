@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import DashboardHeader from './DashboardHeader';
 import DashboardHero from './DashboardHero';
 import DashboardTabs from './DashboardTabs';
 import EmptyState from './EmptyState';
@@ -14,9 +13,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <DashboardHeader />
-
       {/* Hero Section */}
       <DashboardHero />
 

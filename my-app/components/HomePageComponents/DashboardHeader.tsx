@@ -35,6 +35,9 @@ export default function DashboardHeader() {
             <Link href="/products" className="text-gray-700 hover:text-gray-900 transition-colors">
               Products
             </Link>
+            <Link href="/templates" className="text-gray-700 hover:text-gray-900 transition-colors">
+              Templates
+            </Link>
             <Link href="/design" className="text-gray-700 hover:text-gray-900 transition-colors">
               Design
             </Link>
