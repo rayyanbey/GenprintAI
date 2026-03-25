@@ -8,6 +8,7 @@ import CommunityPostModel from "@/src/models/community_post.model";
 import CartItemModel from "@/src/models/cart_item.model";
 import ProductVariantModel from "@/src/models/product_variant.model";
 import TemplateUsageModel from "@/src/models/template_usage.model";
+import CategoryModel from "@/src/models/category.model";
 
 import { applyAssociations } from "@/src/db/associations";
 import { Sequelize } from "sequelize";
@@ -24,6 +25,7 @@ export function initModels(sequelize: Sequelize) {
     CartItem: CartItemModel(sequelize),
     ProductVariant: ProductVariantModel(sequelize),
     TemplateUsage: TemplateUsageModel(sequelize),
+    Category: CategoryModel(sequelize),
   };
 
   applyAssociations(models);

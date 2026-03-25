@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Package, Truck, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import OrderTracking from '@/components/Tracking/OrderTracking';
 
 interface Order {
   id: string;
@@ -181,48 +182,9 @@ export default function OrderDetailPage() {
           )}
         </div>
 
-        {/* Order Tracking */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-6">Order Tracking</h2>
-          
-          <div className="relative">
-            <div className="absolute left-5 top-0 h-full w-1 bg-gray-200">
-              <div
-                className="bg-blue-600 transition-all duration-500"
-                style={{
-                  height: `${(currentStepIndex / (statusSteps.length - 1)) * 100}%`,
-                }}
-              />
-            </div>
-
-            <div className="space-y-8 relative">
-              {statusSteps.map((step, index) => {
-                const Icon = step.icon;
-                const isCompleted = index <= currentStepIndex;
-                const isCurrent = index === currentStepIndex;
-
-                return (
-                  <div key={step.key} className="flex items-center gap-4">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center z-10 ${
-                        isCompleted ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className={`font-semibold ${isCurrent ? 'text-blue-600' : ''}`}>
-                        {step.label}
-                      </p>
-                      {isCurrent && (
-                        <p className="text-sm text-gray-600">Current Status</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        {/* Order Tracking - Using Advanced Tracking Component */}
+        <div className="mb-6">
+          <OrderTracking orderId={order.id} initialData={order} />
         </div>
       </div>
     </div>

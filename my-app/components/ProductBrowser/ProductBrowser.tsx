@@ -1,33 +1,31 @@
 'use client';
 
 import React, { useState, useId } from 'react';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import ProductCardEnhanced from './ProductCardEnhanced';
 import { useProducts, SearchFilters, Product } from '@/hooks/useProducts';
+import { useCategories, Category } from '@/hooks/useCategories';
 
 export interface ProductBrowserProps {
   onPreview?: (productId: string) => void;
   onAddToCart?: (productId: string) => void;
 }
 
-const CATEGORIES = [
-  { id: 'all', label: 'All Products' },
-  { id: 'apparel', label: 'Apparel' },
-  { id: 'accessories', label: 'Accessories' },
-  { id: 'home_living', label: 'Home & Living' },
-];
-
 export default function ProductBrowser({ onPreview, onAddToCart }: ProductBrowserProps) {
-  const [category, setCategory] = useState<string>('all');
+  const [category, setCategory] = useState<number | null>(null);
   const [search, setSearch] = useState<string>('');
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(500);
   const [page, setPage] = useState<number>(1);
   const [showFilters, setShowFilters] = useState<boolean>(true);
+  const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set([0]));
+
+  // Fetch categories hierarchy
+  const { hierarchy: categories, loading: categoriesLoading } = useCategories(true);
 
   // Create filters object
   const filters: SearchFilters = {
-    category: category !== 'all' ? category : undefined,
+    category: category !== null ? category.toString() : undefined,
     minPrice: minPrice > 0 ? minPrice : undefined,
     maxPrice: maxPrice < 500 ? maxPrice : undefined,
     search: search.length > 0 ? search : undefined,
@@ -37,13 +35,27 @@ export default function ProductBrowser({ onPreview, onAddToCart }: ProductBrowse
 
   const { products, loading, error, pagination } = useProducts(filters);
   const inputId = useId();
-  const filterFormId = useId();
 
   const handleResetFilters = () => {
-    setCategory('all');
+    setCategory(null);
     setSearch('');
     setMinPrice(0);
     setMaxPrice(500);
+    setPage(1);
+  };
+
+  const toggleCategoryExpanded = (categoryId: number) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(categoryId)) {
+      newExpanded.delete(categoryId);
+    } else {
+      newExpanded.add(categoryId);
+    }
+    setExpandedCategories(newExpanded);
+  };
+
+  const handleCategorySelect = (categoryId: number) => {
+    setCategory(category === categoryId ? null : categoryId);
     setPage(1);
   };
 
@@ -100,24 +112,37 @@ export default function ProductBrowser({ onPreview, onAddToCart }: ProductBrowse
                 <label className="block text-sm font-semibold text-gray-900 mb-3">
                   Category
                 </label>
-                <div className="space-y-2">
-                  {CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => {
-                        setCategory(cat.id);
-                        setPage(1);
-                      }}
-                      className={`w-full text-left px-4 py-2 rounded-lg font-medium transition-all text-sm ${
-                        category === cat.id
-                          ? 'bg-gradient-to-r from-[#f08080] to-[#f4978e] text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
+                <div className="space-y-1 max-h-80 overflow-y-auto">
+                  {categoriesLoading ? (
+                    <div className="text-sm text-gray-500">Loading categories...</div>
+                  ) : categories.length === 0 ? (
+                    <div className="text-sm text-gray-500">No categories available</div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleCategorySelect(0)}
+                        className={`w-full text-left px-3 py-2 rounded text-sm transition-all ${
+                          category === null
+                            ? 'bg-gradient-to-r from-[#f08080] to-[#f4978e] text-white font-medium'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        All Products
+                      </button>
+                      {categories.map((cat) => (
+                        <CategoryTreeItem
+                          key={cat.id}
+                          category={cat}
+                          selected={category === cat.id}
+                          expanded={expandedCategories.has(cat.id)}
+                          onToggleExpanded={toggleCategoryExpanded}
+                          onSelect={handleCategorySelect}
+                          level={0}
+                        />
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -276,6 +301,81 @@ export default function ProductBrowser({ onPreview, onAddToCart }: ProductBrowse
         </div>
       )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Recursive category tree item component
+ */
+interface CategoryTreeItemProps {
+  category: Category;
+  selected: boolean;
+  expanded: boolean;
+  onToggleExpanded: (id: number) => void;
+  onSelect: (id: number) => void;
+  level: number;
+}
+
+function CategoryTreeItem({
+  category,
+  selected,
+  expanded,
+  onToggleExpanded,
+  onSelect,
+  level,
+}: CategoryTreeItemProps) {
+  const hasChildren = category.children && category.children.length > 0;
+  const paddingLeft = `${level * 12}px`;
+
+  return (
+    <div>
+      <div className="flex items-center gap-0.5">
+        {hasChildren && (
+          <button
+            type="button"
+            onClick={() => onToggleExpanded(category.id)}
+            className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+            aria-label={expanded ? 'Collapse' : 'Expand'}
+          >
+            <ChevronDown
+              size={16}
+              className={`transform transition-transform ${expanded ? '' : '-rotate-90'} text-gray-600`}
+            />
+          </button>
+        )}
+        {!hasChildren && <div className="w-6" />}
+
+        <button
+          type="button"
+          onClick={() => onSelect(category.id)}
+          style={{ paddingLeft }}
+          className={`flex-1 text-left px-2 py-1.5 rounded text-sm transition-all ${
+            selected
+              ? 'bg-gradient-to-r from-[#f08080] to-[#f4978e] text-white font-medium'
+              : 'text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          {category.title}
+        </button>
+      </div>
+
+      {/* Render children */}
+      {hasChildren && expanded && (
+        <div>
+          {category.children!.map((child) => (
+            <CategoryTreeItem
+              key={child.id}
+              category={child}
+              selected={selected}
+              expanded={expanded}
+              onToggleExpanded={onToggleExpanded}
+              onSelect={onSelect}
+              level={level + 1}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

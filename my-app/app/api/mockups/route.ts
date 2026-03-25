@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import {
-  generateMockup,
-  getMockupVariants,
-  generateVideoMockup,
+  createMockupTask,
+  checkMockupStatus,
   getMockupById,
 } from '@/src/services/mockup.service';
 
 /**
- * POST /api/mockups - Generate a mockup
- * Requires authentication
- * Body: { product_id, design_id, layer, displaySize }
+ * POST /api/mockups - Create a mockup generation task
+ * This is an async operation. Client must poll /api/mockups/status/:task_key
+ * Body: { product_id, design_id, design_image_url, variant_ids?, placement, format? }
+ * Returns: { taskKey, mockupId, status }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -24,28 +24,41 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { product_id, design_id, layer = 'front', displaySize = 'medium' } =
-      body;
+    const {
+      product_id,
+      design_id,
+      design_image_url,
+      variant_ids = [],
+      placement = 'front',
+      format = 'jpg',
+      position,
+    } = body;
 
-    if (!product_id || !design_id) {
+    if (!product_id || !design_id || !design_image_url) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Missing required fields: product_id, design_id',
+          error:
+            'Missing required fields: product_id, design_id, design_image_url',
         },
         { status: 400 }
       );
     }
 
     console.log(
-      `Generating mockup for product ${product_id}, design ${design_id}`
+      `Creating mockup task for product ${product_id}, design ${design_id}, placement: ${placement}`
     );
 
-    const result = await generateMockup(
+    const result = await createMockupTask(
       product_id,
       design_id,
-      layer,
-      displaySize
+      design_image_url,
+      variant_ids,
+      placement,
+      {
+        format: format as 'jpg' | 'png',
+        position,
+      }
     );
 
     if (!result.success) {
@@ -55,25 +68,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(result, { status: 201 });
-  } catch (error: any) {
-    console.error('Error generating mockup:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to generate mockup' },
+      {
+        success: true,
+        taskKey: result.taskKey,
+        mockupId: result.mockupId,
+        status: result.status,
+        message:
+          'Mockup generation task created. Poll /api/mockups/status/:task_key to check status.',
+      },
+      { status: 202 }
+    ); // 202 Accepted for async operation
+  } catch (error: any) {
+    console.error('Error creating mockup task:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to create mockup task' },
       { status: 500 }
     );
   }
 }
 
 /**
- * GET /api/mockups/[id] - Get mockup details
+ * GET /api/mockups/:mockup_id - Get mockup details
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
-    const mockupId = params.id;
+    const mockupId = request.nextUrl.searchParams.get('mockup_id');
+
+    if (!mockupId) {
+      return NextResponse.json(
+        { success: false, error: 'Missing query param: mockup_id' },
+        { status: 400 }
+      );
+    }
 
     const result = await getMockupById(mockupId);
 

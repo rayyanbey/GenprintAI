@@ -83,7 +83,13 @@ async function handlePaymentSuccess(paymentIntent: any) {
           // Don't fail the webhook if email fails
         }
         
-        // TODO: Create Printful order
+        // Auto-trigger Printful order creation
+        try {
+          await createPrintfulOrderFromPayment(order);
+        } catch (printfulError) {
+          console.error('Error creating Printful order:', printfulError);
+          // Don't fail the webhook if Printful order creation fails
+        }
       }
     }
   } catch (error) {
@@ -111,5 +117,74 @@ async function handlePaymentFailure(paymentIntent: any) {
     }
   } catch (error) {
     console.error('Error handling payment failure:', error);
+  }
+}
+
+async function createPrintfulOrderFromPayment(order: any) {
+  try {
+    const models = await getModels();
+    const { Design } = models;
+    const { printful } = await import('@/src/utils/printful');
+
+    // Retrieve design to get artwork URL
+    let artworkUrl = '';
+    if (order.design_id) {
+      const design = await Design.findByPk(order.design_id);
+      if (design?.artwork_file_url) {
+        artworkUrl = design.artwork_file_url;
+      }
+    }
+
+    // Parse shipping address
+    let shippingAddress;
+    try {
+      shippingAddress = typeof order.shipping_address === 'string'
+        ? JSON.parse(order.shipping_address)
+        : order.shipping_address;
+    } catch (e) {
+      console.error('Invalid shipping address format:', e);
+      shippingAddress = {};
+    }
+
+    // Create Printful order payload
+    const printfulOrderData: any = {
+      recipient: {
+        name: shippingAddress.name || 'Customer',
+        email: order.email || 'noreply@genprint.ai',
+        address1: shippingAddress.address1 || '',
+        city: shippingAddress.city || '',
+        state_code: shippingAddress.state || '',
+        country_code: shippingAddress.country || 'US',
+        zip: shippingAddress.zip || '',
+      },
+      items: [
+        {
+          variant_id: parseInt(order.product_id),
+          quantity: parseInt(order.quantity || 1),
+          ...(artworkUrl && { files: [{ type: 'front', url: artworkUrl }] }),
+        },
+      ],
+    };
+
+    // Call Printful API to create order
+    const printfulResponse = await printful('/orders', {
+      method: 'POST',
+      body: JSON.stringify(printfulOrderData),
+    });
+
+    const printfulOrder = printfulResponse.result || printfulResponse.data;
+
+    if (printfulOrder?.id) {
+      // Update order with Printful order ID
+      await order.update({
+        printful_order_id: printfulOrder.id,
+        status: 'processing',
+      });
+      console.log(`Printful order created: ${printfulOrder.id} for order ${order.id}`);
+    }
+  } catch (error) {
+    console.error('Error creating Printful order from payment:', error);
+    // Re-throw to be caught by caller's error handler
+    throw error;
   }
 }

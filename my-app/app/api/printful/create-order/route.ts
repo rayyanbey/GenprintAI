@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     const models = await getModels();
-    const { Order } = models;
+    const { Order, Design } = models;
 
     // Get order details
     const order = await Order.findByPk(order_id);
@@ -32,6 +32,15 @@ export async function POST(request: Request) {
     // Verify order belongs to user
     if (order.user_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    // Retrieve design and artwork URL if design_id exists
+    let artworkUrl = '';
+    if (order.design_id) {
+      const design = await Design.findByPk(order.design_id);
+      if (design?.artwork_file_url) {
+        artworkUrl = design.artwork_file_url;
+      }
     }
 
     // Parse shipping address
@@ -47,8 +56,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create Printful order
-    const printfulOrderData = {
+    // Create Printful order with design artwork if available
+    const printfulOrderData: any = {
       recipient: {
         name: shippingAddress.name || session.user.name || 'Customer',
         email: session.user.email,
@@ -62,6 +71,7 @@ export async function POST(request: Request) {
         {
           variant_id: parseInt(order.product_id),
           quantity: order.quantity,
+          ...(artworkUrl && { files: [{ type: 'front', url: artworkUrl }] }),
         },
       ],
     };

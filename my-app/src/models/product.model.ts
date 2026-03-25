@@ -12,7 +12,15 @@ export default function ProductModel(sequelize:Sequelize) {
       },
       name: DataTypes.STRING,
       description: DataTypes.TEXT,
-      category: DataTypes.STRING,
+      category: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        deprecated: true, // Deprecated - use category_id instead
+      },
+      category_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
       price: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true,

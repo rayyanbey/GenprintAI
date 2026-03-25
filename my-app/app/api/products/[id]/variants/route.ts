@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProductVariants } from '@/src/services/product.service';
+import { getModels } from '@/lib/db-dynamic';
 
 /**
- * GET /api/products/[id]/variants - Get all variants for a product
+ * GET /api/products/:id/variants
+ * Fetch all variants for a product with pricing and availability
  */
 export async function GET(
   request: NextRequest,
@@ -11,20 +12,89 @@ export async function GET(
   try {
     const productId = params.id;
 
-    const result = await getProductVariants(productId);
-
-    if (!result.success) {
+    if (!productId) {
       return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 500 }
+        { error: 'Product ID is required' },
+        { status: 400 }
       );
     }
 
-    return NextResponse.json(result);
+    const models = await getModels();
+    const { Product, ProductVariant } = models;
+
+    // Verify product exists
+    const product = await Product.findByPk(productId);
+    if (!product) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get all variants for product
+    const variants = await ProductVariant.findAll({
+      where: { product_id: productId },
+      order: [['size', 'ASC'], ['color', 'ASC']],
+      attributes: [
+        'id',
+        'printful_variant_id',
+        'name',
+        'size',
+        'color',
+        'price',
+        'availability',
+        'sku',
+        'weight',
+        'metadata'
+      ]
+    });
+
+    // Format variants
+    const formattedVariants = variants.map((v: any) => {
+      const variantData = v.get({ plain: true });
+      return {
+        id: variantData.id,
+        printful_id: variantData.printful_variant_id,
+        name: variantData.name,
+        size: variantData.size,
+        color: variantData.color,
+        price: parseFloat(variantData.price || 0),
+        availability: variantData.availability !== false,
+        sku: variantData.sku,
+        weight: variantData.weight,
+        metadata: variantData.metadata
+      };
+    });
+
+    // Get price range
+    const prices = formattedVariants
+      .filter(v => v.availability)
+      .map(v => v.price);
+    
+    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+
+    return NextResponse.json({
+      success: true,
+      product: {
+        id: product.id,
+        name: product.name,
+        image_url: product.image_url,
+        category_id: product.category_id,
+        variant_count: variants.length
+      },
+      variants: formattedVariants,
+      pricing: {
+        min_price: minPrice,
+        max_price: maxPrice,
+        available_count: formattedVariants.filter(v => v.availability).length,
+        total_count: formattedVariants.length
+      }
+    });
   } catch (error: any) {
     console.error('Error fetching product variants:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch variants' },
+      { error: 'Failed to fetch product variants', details: error.message },
       { status: 500 }
     );
   }

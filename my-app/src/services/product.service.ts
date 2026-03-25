@@ -27,7 +27,7 @@ export async function syncPrintfulProducts(limit: number = 20) {
           printful_id: printfulProduct.id,
           name: printfulProduct.title,
           description: printfulProduct.description,
-          category: printfulProduct.main_category_id?.toString() || 'general',
+          category_id: printfulProduct.main_category_id || null,
           price: 0, // Base price, actual price comes from variants
           image_url: printfulProduct.image,
           brand: printfulProduct.brand,
@@ -88,8 +88,7 @@ export async function getProducts(page: number = 1, limit: number = 12) {
         id: p.id,
         printful_id: p.printful_id,
         name: p.name,
-        description: p.description,
-        category: p.category,
+        category_id: p.category_id,
         price: parseFloat(p.price || 0),
         image_url: p.image_url,
         brand: p.brand,
@@ -139,7 +138,7 @@ export async function getProductById(id: string) {
         printful_id: product.printful_id,
         name: product.name,
         description: product.description,
-        category: product.category,
+        category_id: product.category_id,
         price: parseFloat(product.price || 0),
         image_url: product.image_url,
         brand: product.brand,
@@ -190,7 +189,7 @@ export async function getProductWithVariants(productId: string) {
         printful_id: product.printful_id,
         name: product.name,
         description: product.description,
-        category: product.category,
+        category_id: product.category_id,
         price: parseFloat(product.price || 0),
         image_url: product.image_url,
         brand: product.brand,
@@ -293,7 +292,10 @@ export async function searchProducts(filters: {
     };
 
     if (category) {
-      where.category = category;
+      const categoryId = parseInt(category);
+      if (!isNaN(categoryId)) {
+        where.category_id = categoryId;
+      }
     }
 
     const offset = (page - 1) * limit;
@@ -311,7 +313,7 @@ export async function searchProducts(filters: {
         id: p.id,
         printful_id: p.printful_id,
         name: p.name,
-        category: p.category,
+        category_id: p.category_id,
         price: parseFloat(p.price || 0),
         image_url: p.image_url,
         brand: p.brand,
