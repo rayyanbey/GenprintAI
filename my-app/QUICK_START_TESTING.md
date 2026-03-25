@@ -16,16 +16,12 @@ npm install
 ## 2️⃣ Run Database Migrations
 ```bash
 # Connect to your database and run these SQL migrations
-psql postgresql://avnadmin:AVNS_u-j6u2rxRfa8Q2GtB-Y@pg-38603677-rayyanasghar9-f141.g.aivencloud.com:21331/genprintai < database_migration_ecommerce.sql
-
-psql postgresql://avnadmin:AVNS_u-j6u2rxRfa8Q2GtB-Y@pg-38603677-rayyanasghar9-f141.g.aivencloud.com:21331/genprintai < database_migration_order_history.sql
-```
-
-**Or copy your DB_URL from .env**:
-```bash
+# Use your database connection string from .env file:
 psql $DB_URL < database_migration_ecommerce.sql
 psql $DB_URL < database_migration_order_history.sql
 ```
+
+**Note**: Database credentials are stored in `.env` file (not committed to git)
 
 
 **What it does**: 

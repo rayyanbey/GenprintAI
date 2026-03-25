@@ -4,7 +4,13 @@ import fs from 'fs';
 import path from 'path';
 
 async function runMigrations() {
-  const dbUrl = process.env.DB_URL || 'postgresql://avnadmin:AVNS_u-j6u2rxRfa8Q2GtB-Y@pg-38603677-rayyanasghar9-f141.g.aivencloud.com:21331/genprintai';
+  const dbUrl = process.env.DB_URL;
+
+  if (!dbUrl) {
+    console.error('❌ ERROR: DB_URL environment variable is not set');
+    console.error('Please add DB_URL to your .env file');
+    process.exit(1);
+  }
 
   const sequelize = new Sequelize(dbUrl, {
     dialect: 'postgres' as any,
