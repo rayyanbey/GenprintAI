@@ -126,7 +126,11 @@ export default function MockupPreviewModal({
         quantity: 1,
         image_url: mockupUrl || '',
         design_id: designId || '',
-        variant: 'front',
+        variant: {
+          sku: `SKU-${productId}-front`,
+          size: 'Default',
+          color: 'Preview',
+        },
       });
 
       // Close modal after adding

@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const productId = params.id;
+    const { id: productId } = await params;
 
     if (!productId) {
       return NextResponse.json(

@@ -55,7 +55,13 @@ export default function ProductBrowser({ onPreview, onAddToCart }: ProductBrowse
   };
 
   const handleCategorySelect = (categoryId: number) => {
-    setCategory(category === categoryId ? null : categoryId);
+    // If clicking on "All Products" (categoryId === 0), clear the category filter
+    if (categoryId === 0) {
+      setCategory(null);
+    } else {
+      // For regular categories, toggle selection
+      setCategory(category === categoryId ? null : categoryId);
+    }
     setPage(1);
   };
 

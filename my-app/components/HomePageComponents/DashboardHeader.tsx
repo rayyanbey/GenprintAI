@@ -3,14 +3,16 @@
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { Search, Bell } from 'lucide-react';
+import { Search, Bell, ShoppingCart } from 'lucide-react';
 import Image from 'next/image';
 import { SafeAvatar } from '@/components/ui/safe-image';
 import { ProfileSidebar } from '@/components/Profile';
 import { getUserInitials } from '@/lib/session-utils';
+import { useCart } from '@/contexts/CartContext';
 
 export default function DashboardHeader() {
   const { data: session } = useSession();
+  const { totalItems } = useCart();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const userInitials = getUserInitials(session?.user?.name, session?.user?.email);
@@ -60,6 +62,23 @@ export default function DashboardHeader() {
               <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative" aria-label="Notifications">
                 <Bell className="w-5 h-5 text-gray-700" />
               </button>
+            )}
+
+            {/* Cart Icon - Only show when logged in */}
+            {session?.user && (
+              <Link href="/cart">
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative group" aria-label="Shopping cart">
+                  <ShoppingCart className="w-5 h-5 text-gray-700" />
+                  {totalItems > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-[#ef4444] text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
+                      {totalItems > 9 ? '9+' : totalItems}
+                    </span>
+                  )}
+                  <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-12 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    Cart ({totalItems})
+                  </span>
+                </button>
+              </Link>
             )}
 
             {/* User Avatar or Login Button */}

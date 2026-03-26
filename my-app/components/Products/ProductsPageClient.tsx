@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingCart, Package } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Product {
   id: string;
@@ -36,19 +37,25 @@ interface Props {
 export default function ProductsPageClient({ initialProducts, initialPagination }: Props) {
   const [products] = useState<Product[]>(initialProducts);
   const { addItem } = useCart();
+  const { addToast } = useToast();
 
   const handleAddToCart = (product: Product) => {
     addItem({
-      id: product.id,
+      id: `${product.id}-default`,
       product_id: product.id,
       name: product.name,
       price: product.price || 19.99, // Default price if not set
       quantity: 1,
       image_url: product.image_url,
+      variant: {
+        sku: `SKU-${product.id}`,
+        size: 'Default',
+        color: 'Default',
+      },
     });
     
-    // Show success message (you can add a toast notification here)
-    alert(`${product.name} added to cart!`);
+    // Show success toast notification
+    addToast(`✓ ${product.name} added to cart!`, 'success');
   };
 
   if (products.length === 0) {

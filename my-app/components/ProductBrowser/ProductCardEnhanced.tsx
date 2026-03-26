@@ -2,15 +2,18 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { ShoppingCart, Eye } from 'lucide-react';
-import { useCart } from '@/contexts/CartContext';
+
+// Default price when POD doesn't return a price
+const DEFAULT_PRODUCT_PRICE = 100;
 
 export interface ProductCardProps {
   id: string;
   name: string;
   description?: string;
   image_url?: string;
-  price: number;
+  price: number | null;
   category: string;
   variant_count?: number;
   onPreview?: (productId: string) => void;
@@ -26,23 +29,8 @@ export default function ProductCardEnhanced({
   variant_count,
   onPreview,
 }: ProductCardProps) {
-  const { addItem } = useCart();
-
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (addItem) {
-      addItem({
-        id: `${id}-default`,
-        product_id: id,
-        name,
-        price,
-        quantity: 1,
-        image_url: image_url || '',
-        design_id: '', // Will be set during checkout
-        variant: 'default',
-      });
-    }
-  };
+  // Use default price if not provided
+  const displayPrice = price || DEFAULT_PRODUCT_PRICE;
 
   const handlePreview = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -93,19 +81,19 @@ export default function ProductCardEnhanced({
         {/* Price */}
         <div className="mt-auto mb-4">
           <p className="text-lg font-bold text-gray-900">
-            ${price.toFixed(2)}
+            ${displayPrice.toFixed(2)}
           </p>
         </div>
 
         {/* Buttons */}
         <div className="flex gap-2">
-          <button
-            onClick={handleAddToCart}
+          <Link
+            href={`/products/${id}`}
             className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-[#f08080] to-[#f4978e] hover:from-[#f08080]/90 hover:to-[#f4978e]/90 text-white font-medium py-2 rounded-lg transition-all text-sm"
           >
             <ShoppingCart size={16} />
-            <span>Add</span>
-          </button>
+            <span>View Details</span>
+          </Link>
           {onPreview && (
             <button
               onClick={handlePreview}

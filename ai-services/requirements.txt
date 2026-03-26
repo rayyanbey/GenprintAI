@@ -3,3 +3,4 @@ uvicorn
 sentence-transformers
 groq
 cloudinary
+dotenv

@@ -3,8 +3,10 @@
 import React from 'react';
 import Link from 'next/link';
 import { Search, ShoppingCart } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
 
 export default function ProductCatalogHeader() {
+  const { totalItems } = useCart();
   return (
     <header className="w-full px-6 py-4 bg-white border-b border-gray-200">
       <nav className="max-w-7xl mx-auto flex items-center justify-between">
@@ -42,9 +44,19 @@ export default function ProductCatalogHeader() {
           </div>
 
           {/* Cart Icon */}
-          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ShoppingCart className="w-5 h-5 text-gray-700" />
-          </button>
+          <Link href="/cart">
+            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative group" aria-label="Shopping cart">
+              <ShoppingCart className="w-5 h-5 text-gray-700" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#ef4444] text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
+                  {totalItems > 9 ? '9+' : totalItems}
+                </span>
+              )}
+              <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-12 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                Cart ({totalItems})
+              </span>
+            </button>
+          </Link>
         </div>
       </nav>
     </header>

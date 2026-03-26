@@ -12,7 +12,7 @@ import cloudinary
 import cloudinary.uploader
 
 
-
+##http://localhost:8000/
 load_dotenv()
 
 HF_API_KEY = os.getenv("HF_API_KEY")
@@ -80,6 +80,7 @@ Trend:
     return {"trend": trend}
 
 
+## http://localhost:8001/generate-design
 @app.post("/generate-design")
 def generate_design(req: TextRequest):
     try:

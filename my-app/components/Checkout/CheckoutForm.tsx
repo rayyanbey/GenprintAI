@@ -84,6 +84,13 @@ export default function CheckoutForm() {
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <h2 className="text-2xl font-bold mb-6">Complete Your Purchase</h2>
+
+      {/* Variant Selection Notice */}
+      <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-blue-800 text-sm">
+          <strong>📝 Note:</strong> If you didn't select specific size or color options, we'll use default specifications. You can customize these details in your order confirmation or contact us.
+        </p>
+      </div>
       
       {/* Order Summary */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">

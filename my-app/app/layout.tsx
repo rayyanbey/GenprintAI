@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, Poppins } from "next/font/google";
 import './globals.css';
 import { SessionProvider } from '@/components/auth';
 import { CartProvider } from '@/contexts/CartContext';
+import { ToastProvider } from '@/contexts/ToastContext';
+import { ToastContainer } from '@/components/ui/ToastContainer';
 
 
 const geistSans = Geist({
@@ -36,9 +38,12 @@ export default function RootLayout({
         className={`${poppins.className} antialiased`}
       >
         <SessionProvider>
-          <CartProvider>
-            {children}
-          </CartProvider>
+          <ToastProvider>
+            <CartProvider>
+              {children}
+            </CartProvider>
+            <ToastContainer />
+          </ToastProvider>
         </SessionProvider>
       </body>
     </html>

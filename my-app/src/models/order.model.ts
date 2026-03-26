@@ -61,6 +61,11 @@ export default function OrderModel(sequelize:Sequelize) {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      // Admin notes for order
+      admin_notes: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
     },
     {
       sequelize,

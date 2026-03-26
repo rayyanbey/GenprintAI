@@ -58,6 +58,16 @@ export default function ProductVariantModel(sequelize: Sequelize) {
         type: DataTypes.JSON,
         allowNull: true,
       },
+      // Inventory management fields
+      low_stock_threshold: {
+        type: DataTypes.INTEGER,
+        defaultValue: 5,
+        allowNull: true,
+      },
+      stock_level: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
       created_at: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,

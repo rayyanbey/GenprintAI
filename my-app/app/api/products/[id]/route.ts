@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const productId = params.id;
+    const { id: productId } = await params;
 
     const result = await getProductWithVariants(productId);
 

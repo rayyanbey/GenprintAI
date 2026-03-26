@@ -13,6 +13,7 @@ interface CartItem {
   variant?: {
     size?: string;
     color?: string;
+    sku?: string;
   };
 }
 

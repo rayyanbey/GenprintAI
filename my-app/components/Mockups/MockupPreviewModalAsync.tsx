@@ -125,11 +125,16 @@ export default function MockupPreviewModalAsync({
     addItem({
       id: `${productId}-${selectedAngle}`,
       product_id: productId,
+      name: 'Mockup Item',
+      price: 0,
       design_id: designId || '',
       quantity: 1,
       image_url: currentMockup.mockup_url,
-      variant: selectedAngle,
-      mockup_placement: selectedAngle,
+      variant: {
+        sku: `SKU-${productId}-${selectedAngle}`,
+        size: 'Default',
+        color: selectedAngle,
+      },
     });
 
     onClose();

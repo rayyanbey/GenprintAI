@@ -15,6 +15,7 @@ import CartItemModel from "../models/cart_item.model";
 import ProductVariantModel from "../models/product_variant.model";
 import TemplateUsageModel from "../models/template_usage.model";
 import CategoryModel from "../models/category.model";
+import ReturnRequestModel from "../models/return_request.model";
 import { applyAssociations } from "./associations";
 
 declare global {
@@ -29,24 +30,36 @@ let modelsCache: any = null;
 
 function getSequelize() {
   if (!sequelizeInstance) {
-    const dbUrl = process.env.DB_URL || process.env.DATABASE_URL;
+    let dbUrl = process.env.DB_URL || process.env.DATABASE_URL;
     
     if (!dbUrl) {
       throw new Error("Database URL not found. Please set DB_URL or DATABASE_URL environment variable.");
     }
+    
+    // Strip sslmode parameter from URL to avoid conflicts with Sequelize SSL config
+    dbUrl = dbUrl.replace(/\?sslmode=.+/, '');
     
     console.log("Creating Sequelize instance with database URL...");
     
     sequelizeInstance = global._sequelize ?? new Sequelize(dbUrl, {
       dialect: "postgres",
       dialectModule: pg,
-      logging: process.env.NODE_ENV === 'development' ? console.log : false, // Disable SQL logging in production
+      logging: false, // Disable SQL logging - set to console.log if debugging
       dialectOptions: {
         ssl: {
           require: true,
-          rejectUnauthorized: false,
-        },
+          rejectUnauthorized: false, // Allow self-signed certificates
+        }
       },
+      // Connection pool for better performance
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000,
+      },
+      // Increase timeout for slow connections
+      acquireTimeoutMillis: 30000,
     });
     
     if (!global._sequelize) {
@@ -75,6 +88,7 @@ function getModels() {
       ProductVariant: ProductVariantModel(seq),
       TemplateUsage: TemplateUsageModel(seq),
       Category: CategoryModel(seq),
+      ReturnRequest: ReturnRequestModel(seq),
     };
     
     if (!global._models) {

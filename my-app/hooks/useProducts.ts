@@ -5,7 +5,8 @@ export interface Product {
   printful_id?: number;
   name: string;
   description?: string;
-  category: string;
+  category?: string;  // Deprecated - use category_id instead
+  category_id?: number;  // Numeric category ID from Printful
   price: number;
   image_url?: string;
   brand?: string;
@@ -13,7 +14,7 @@ export interface Product {
 }
 
 export interface SearchFilters {
-  category?: string;
+  category?: string | number;  // Accept both string and number for flexibility
   minPrice?: number;
   maxPrice?: number;
   search?: string;
