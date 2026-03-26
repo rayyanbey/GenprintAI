@@ -63,6 +63,16 @@ export default function UserModel(sequelize:Sequelize) {
         type: DataTypes.ENUM('male', 'female', 'other', 'prefer_not_to_say'),
         allowNull: true,
       },
+      role: {
+        type: DataTypes.STRING(50),
+        defaultValue: 'customer',
+        allowNull: false,
+      },
+      status: {
+        type: DataTypes.STRING(50),
+        defaultValue: 'active',
+        allowNull: false,
+      },
       onboarding_completed: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,

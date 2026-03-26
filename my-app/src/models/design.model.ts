@@ -55,6 +55,14 @@ export default function DesignModel(sequelize:Sequelize) {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
       },
+      approval_status: {
+        type: DataTypes.STRING(50),
+        defaultValue: 'approved',
+      },
+      is_community: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
       created_at: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
