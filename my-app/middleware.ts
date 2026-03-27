@@ -2,8 +2,19 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 
-// Routes that require authentication (only onboarding is truly protected)
-const protectedRoutes = ['/onboarding'];
+// Routes that require authentication
+const protectedRoutes = [
+  '/onboarding',
+  '/home',
+  '/cart',
+  '/checkout',
+  '/checkout-preview',
+  '/orders',
+  '/profile',
+  '/my-designs',
+  '/mockup-request',
+  '/design-studio',
+];
 
 // Routes that should redirect to home if already authenticated
 const authRoutes = ['/login', '/signup'];
@@ -17,11 +28,9 @@ export async function middleware(request: NextRequest) {
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
     const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
 
-    // Redirect to login if accessing onboarding without session
+    // Redirect to landing page if accessing protected routes without session
     if (isProtectedRoute && !session) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(loginUrl);
+      return NextResponse.redirect(new URL('/', request.url));
     }
 
     // Redirect to home if accessing auth routes with active session and onboarding completed
