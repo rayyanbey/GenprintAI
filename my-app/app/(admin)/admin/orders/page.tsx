@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/Admin/StatusBadge';
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     async function init() {
       try {
@@ -18,6 +18,23 @@ export default function OrdersPage() {
     }
     init();
   }, []);
+
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
+    try {
+      const res = await fetch('/api/admin/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: newStatus })
+      });
+      if (res.ok) {
+        setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
+      } else {
+        console.error('Failed to update status');
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -41,7 +58,23 @@ export default function OrdersPage() {
                   <td className="px-4 py-4 text-sm">{order.user.name}</td>
                   <td className="px-4 py-4 text-sm">{order.product}</td>
                   <td className="px-4 py-4 text-sm font-bold">${order.amount.toFixed(2)}</td>
-                  <td className="px-4 py-4 text-sm"><StatusBadge status={order.status} /></td>
+                  <td className="px-4 py-4 text-sm">
+                    <div className="flex flex-col gap-2 items-start">
+                      <select
+                        value={order.status}
+                        onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
+                        className="text-xs font-medium py-1 px-2 rounded-md border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#f08080] focus:border-transparent text-gray-700 w-32"
+                      >
+                        <option value="pending_payment">Payment Pending</option>
+                        <option value="paid">Paid</option>
+                        <option value="processing">Processing</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                      <StatusBadge status={order.status} />
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

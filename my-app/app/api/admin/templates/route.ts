@@ -101,3 +101,34 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Failed to delete template' }, { status: 500 });
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    const authResult = await requireAdmin();
+    if (authResult.error) return authResult.error;
+
+    const { models } = authResult;
+    const body = await request.json();
+    const { name, category, description, color_variants } = body;
+
+    if (!name || !category) {
+      return NextResponse.json({ error: 'Name and category are required' }, { status: 400 });
+    }
+
+    const newTemplate = await models.Template.create({
+      id: crypto.randomUUID(),
+      name,
+      category,
+      description: description || '',
+      color_variants: color_variants || [],
+      is_community: false,
+      approval_status: 'approved',
+      usage_count: 0,
+    });
+
+    return NextResponse.json({ success: true, template: newTemplate });
+  } catch (error: any) {
+    console.error('Admin Template Create Error:', error);
+    return NextResponse.json({ error: 'Failed to create template' }, { status: 500 });
+  }
+}
