@@ -73,15 +73,71 @@ export async function PUT(request: Request) {
     const authResult = await requireAdmin();
     if (authResult.error) return authResult.error;
 
-    const { models } = authResult;
+    const { models, userId } = authResult;
     const body = await request.json();
-    const { id, status } = body;
+    const { id, status, feedback_text } = body;
 
-    if (!id || !status) {
-      return NextResponse.json({ error: 'Design ID and status are required' }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: 'Design ID is required' }, { status: 400 });
     }
 
-    await models.Design.update({ approval_status: status }, { where: { id } });
+    const updateData: any = {};
+    
+    if (status) {
+      updateData.approval_status = status;
+    }
+
+    let shouldSendEmail = false;
+    let designerEmail: string | null = null;
+    let designTitle: string | null = null;
+
+    if (feedback_text !== undefined) {
+      if (feedback_text.trim()) {
+        updateData.admin_feedback = feedback_text.trim();
+        updateData.admin_feedback_date = new Date();
+        updateData.admin_feedback_from_id = userId;
+        shouldSendEmail = true;
+      } else {
+        // Allow clearing feedback by sending empty string
+        updateData.admin_feedback = null;
+        updateData.admin_feedback_date = null;
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'No update data provided' }, { status: 400 });
+    }
+
+    // Get design and designer info before updating
+    if (shouldSendEmail) {
+      const { Design, User } = models;
+      const design = await Design.findByPk(id);
+      
+      if (design) {
+        designTitle = design.title;
+        const designer = await User.findByPk(design.user_id);
+        if (designer) {
+          designerEmail = designer.email;
+        }
+      }
+    }
+
+    await models.Design.update(updateData, { where: { id } });
+
+    // Send email notification to designer
+    if (shouldSendEmail && designerEmail && designTitle && feedback_text) {
+      try {
+        const { sendDesignFeedbackEmail } = await import('@/lib/email');
+        await sendDesignFeedbackEmail(designerEmail, {
+          designTitle,
+          feedbackMessage: feedback_text.trim(),
+          designerName: 'Admin',
+        });
+      } catch (emailError) {
+        console.error('Error sending feedback email:', emailError);
+        // Don't fail the request if email fails
+      }
+    }
 
     return NextResponse.json({ success: true, message: 'Design updated successfully' });
   } catch (error: any) {

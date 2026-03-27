@@ -11,19 +11,23 @@ import { checkMockupStatus } from '@/src/services/mockup.service';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { task_key: string } }
+  { params }: { params: Promise<{ task_key: string }> }
 ) {
   try {
     const session = await auth();
+    const url = new URL(request.url);
+    const isDevMode = process.env.NODE_ENV === 'development';
+    const isTestMode = url.searchParams.get('test') === 'true';
 
-    if (!session?.user) {
+    // Allow test requests in development mode
+    if (!(session?.user) && !(isDevMode && isTestMode)) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const taskKey = params.task_key;
+    const { task_key: taskKey } = await params;
 
     if (!taskKey) {
       return NextResponse.json(

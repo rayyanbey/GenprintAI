@@ -7,7 +7,7 @@ import { useProducts, SearchFilters, Product } from '@/hooks/useProducts';
 import { useCategories, Category } from '@/hooks/useCategories';
 
 export interface ProductBrowserProps {
-  onPreview?: (productId: string) => void;
+  onPreview?: (product: Product) => void;
   onAddToCart?: (productId: string) => void;
 }
 
@@ -255,7 +255,7 @@ export default function ProductBrowser({ onPreview, onAddToCart }: ProductBrowse
                 price={product.price}
                 category={product.category}
                 variant_count={product.variant_count}
-                onPreview={onPreview}
+                onPreview={() => onPreview?.(product)}
               />
             ))}
           </div>

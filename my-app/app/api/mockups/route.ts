@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import {
   createMockupTask,
-  checkMockupStatus,
   getMockupById,
 } from '@/src/services/mockup.service';
 
@@ -13,10 +12,15 @@ import {
  * Returns: { taskKey, mockupId, status }
  */
 export async function POST(request: NextRequest) {
+  const requestId = `mockup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   try {
     const session = await auth();
+    const url = new URL(request.url);
+    const isDevMode = process.env.NODE_ENV === 'development';
+    const isTestMode = url.searchParams.get('test') === 'true';
 
-    if (!session?.user) {
+    // Allow test requests in development mode
+    if (!(session?.user) && !(isDevMode && isTestMode)) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized - must be logged in' },
         { status: 401 }
@@ -31,7 +35,13 @@ export async function POST(request: NextRequest) {
       variant_ids = [],
       placement = 'front',
       format = 'jpg',
+      width,
       position,
+      product_options,
+      option_groups,
+      options,
+      file_options,
+      product_template_id,
     } = body;
 
     if (!product_id || !design_id || !design_image_url) {
@@ -46,7 +56,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(
-      `Creating mockup task for product ${product_id}, design ${design_id}, placement: ${placement}`
+      '[API /api/mockups][start]',
+      {
+        requestId,
+        product_id,
+        design_id,
+        placement,
+        format,
+        variant_count: Array.isArray(variant_ids) ? variant_ids.length : 0,
+      }
     );
 
     const result = await createMockupTask(
@@ -57,7 +75,13 @@ export async function POST(request: NextRequest) {
       placement,
       {
         format: format as 'jpg' | 'png',
+        width,
         position,
+        productOptions: product_options,
+        optionGroups: option_groups,
+        options,
+        fileOptions: file_options,
+        productTemplateId: product_template_id,
       }
     );
 
@@ -71,6 +95,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
+        requestId,
         taskKey: result.taskKey,
         mockupId: result.mockupId,
         status: result.status,
@@ -79,10 +104,20 @@ export async function POST(request: NextRequest) {
       },
       { status: 202 }
     ); // 202 Accepted for async operation
-  } catch (error: any) {
-    console.error('Error creating mockup task:', error);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error('[API /api/mockups][error]', {
+      requestId,
+      message: err?.message,
+      stack: err?.stack,
+      error,
+    });
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create mockup task' },
+      {
+        success: false,
+        requestId,
+        error: err?.message || 'Failed to create mockup task',
+      },
       { status: 500 }
     );
   }
@@ -112,7 +147,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching mockup:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch mockup' },

@@ -16,7 +16,15 @@ export interface ProductCardProps {
   price: number | null;
   category: string;
   variant_count?: number;
-  onPreview?: (productId: string) => void;
+  onPreview?: (product: {
+    id: string;
+    name: string;
+    description?: string;
+    image_url?: string;
+    price: number;
+    category: string;
+    variant_count?: number;
+  }) => void;
 }
 
 export default function ProductCardEnhanced({
@@ -35,7 +43,15 @@ export default function ProductCardEnhanced({
   const handlePreview = (e: React.MouseEvent) => {
     e.preventDefault();
     if (onPreview) {
-      onPreview(id);
+      onPreview({
+        id,
+        name,
+        description,
+        image_url,
+        price: displayPrice,
+        category,
+        variant_count,
+      });
     }
   };
 

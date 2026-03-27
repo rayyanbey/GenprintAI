@@ -6,7 +6,17 @@
  */
 
 const PRINTFUL_API_BASE = 'https://api.printful.com';
-const PRINTFUL_API_KEY = process.env.POD || process.env.PRINTFUL_API_KEY;
+
+function resolvePrintfulApiKey(): string {
+  // Prefer the same env used by other Printful integrations in this repo.
+  const rawKey =
+    process.env.PRINTFUL ||
+    process.env.PRINTFUL_API_KEY ||
+    process.env.POD ||
+    '';
+
+  return rawKey.replace(/^Bearer\s+/i, '').trim();
+}
 
 interface PrintfulAPIOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -22,9 +32,19 @@ async function makePrintfulRequest(
   options: PrintfulAPIOptions = {}
 ) {
   const { method = 'GET', body, timeout = 30000 } = options;
+  const printfulApiKey = resolvePrintfulApiKey();
+
+  if (!printfulApiKey) {
+    throw {
+      status: 401,
+      statusText: 'Unauthorized',
+      message:
+        'Printful API key is missing. Set PRINTFUL (preferred) or PRINTFUL_API_KEY in environment.',
+    };
+  }
 
   const headers: any = {
-    'Authorization': `Bearer ${PRINTFUL_API_KEY}`,
+    'Authorization': `Bearer ${printfulApiKey}`,
     'Content-Type': 'application/json',
   };
 
@@ -146,24 +166,39 @@ export async function getProduct(productId: number) {
  */
 export async function getProductVariants(productId: number) {
   try {
-    const response = await makePrintfulRequest(
-      `/v2/products/${productId}/variants`
-    );
+    // Primary endpoint used by current Printful catalog API.
+    // Response shape: { result: { product: {...}, variants: [...] } }
+    const response = await makePrintfulRequest(`/products/${productId}`);
+
+    const variants =
+      response?.result?.variants || response?.variants || response?.data || [];
 
     return {
       success: true,
-      data: response.result || response.data || [],
+      data: variants,
     };
   } catch (error: any) {
-    console.error(
-      `Error fetching variants for product ${productId}:`,
-      error
-    );
-    return {
-      success: false,
-      error: formatPrintfulError(error),
-      data: [],
-    };
+    // Compatibility fallback for accounts/environments still on v2 variants endpoint.
+    try {
+      const fallbackResponse = await makePrintfulRequest(
+        `/v2/products/${productId}/variants`
+      );
+
+      return {
+        success: true,
+        data: fallbackResponse.result || fallbackResponse.data || [],
+      };
+    } catch (fallbackError: any) {
+      console.error(
+        `Error fetching variants for product ${productId}:`,
+        fallbackError
+      );
+      return {
+        success: false,
+        error: formatPrintfulError(fallbackError),
+        data: [],
+      };
+    }
   }
 }
 

@@ -63,6 +63,21 @@ export default function DesignModel(sequelize:Sequelize) {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
       },
+      admin_feedback: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Feedback from admin about the design',
+      },
+      admin_feedback_date: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'When feedback was provided',
+      },
+      admin_feedback_from_id: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'User ID of admin who provided feedback',
+      },
       created_at: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,

@@ -6,14 +6,140 @@ import { printful } from '@/src/utils/printful';
 
 const MOCKUP_URL_EXPIRY_HOURS = 72; // Mockup URLs expire in 72 hours
 
+async function resolvePrintfulProductId(productId: string): Promise<number> {
+  const models = await getModels();
+  const { Product } = models;
+
+  const requestedId = String(productId);
+  const numericId = Number.parseInt(requestedId, 10);
+
+  // First try PK lookup because product_id from UI is usually the local Product.id
+  const byPk = await Product.findByPk(requestedId);
+  if (byPk?.printful_id) {
+    return Number(byPk.printful_id);
+  }
+
+  // If the incoming id already is a Printful ID, resolve it directly.
+  if (!Number.isNaN(numericId)) {
+    const byPrintfulId = await Product.findOne({
+      where: { printful_id: numericId },
+    });
+    if (byPrintfulId?.printful_id) {
+      return Number(byPrintfulId.printful_id);
+    }
+
+    // Last fallback: use numeric id as-is for direct Printful catalog usage.
+    return numericId;
+  }
+
+  throw new Error(`Unable to resolve Printful product ID for product: ${productId}`);
+}
+
+function extractVariantId(variant: any): number | null {
+  if (typeof variant === 'number' && Number.isFinite(variant)) {
+    return variant;
+  }
+
+  if (typeof variant === 'string') {
+    const direct = Number.parseInt(variant, 10);
+    if (!Number.isNaN(direct)) {
+      return direct;
+    }
+
+    const match = variant.match(/variant_id=(\d+)/);
+    if (match?.[1]) {
+      return Number.parseInt(match[1], 10);
+    }
+  }
+
+  if (variant && typeof variant === 'object') {
+    const candidate = variant.variant_id ?? variant.id;
+    const parsed = Number.parseInt(String(candidate), 10);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+async function getPrintfulProductContext(printfulProductId: number): Promise<{
+  productType?: string;
+  validPlacements: string[];
+}> {
+  try {
+    const productResponse = await printful(`/products/${printfulProductId}`);
+
+    const product = productResponse?.result?.product;
+    const files = Array.isArray(product?.files) ? product.files : [];
+    const placementsFromFiles = files
+      .map((file: any) => String(file?.type || file?.id || '').trim().toLowerCase())
+      .filter((value: string) => value.length > 0 && value !== 'mockup' && value !== 'preview');
+
+    const validPlacements: string[] = Array.from(new Set<string>(placementsFromFiles));
+
+    return {
+      productType: product?.type,
+      validPlacements,
+    };
+  } catch (error: any) {
+    console.warn(`Could not fetch product context for ${printfulProductId}:`, error.message);
+    return {
+      productType: undefined,
+      validPlacements: [],
+    };
+  }
+}
+
+function resolvePlacement(
+  requestedPlacement: string,
+  validPlacements: string[],
+  isCutSew: boolean
+): string {
+  const requested = String(requestedPlacement || 'front').toLowerCase();
+  const validSet = new Set(validPlacements.map((p) => p.toLowerCase()));
+
+  if (validSet.size === 0) {
+    return isCutSew ? 'default' : requested;
+  }
+
+  if (validSet.has(requested)) {
+    return requested;
+  }
+
+  const aliases: Record<string, string[]> = {
+    front: ['default', 'front'],
+    back: ['back'],
+    left_sleeve: ['sleeve_left', 'left_sleeve'],
+    right_sleeve: ['sleeve_right', 'right_sleeve'],
+    sleeve_left: ['sleeve_left', 'left_sleeve'],
+    sleeve_right: ['sleeve_right', 'right_sleeve'],
+  };
+
+  const candidates = aliases[requested] || [];
+  for (const candidate of candidates) {
+    if (validSet.has(candidate)) {
+      return candidate;
+    }
+  }
+
+  if (isCutSew && validSet.has('default')) {
+    return 'default';
+  }
+
+  return validPlacements[0];
+}
+
 /**
  * Get print files and available placements for a product
  * This is STEP 1 before creating mockups
  */
 export async function getPrintFilesForProduct(productId: string) {
   try {
+    const printfulProductId = await resolvePrintfulProductId(productId);
+
     const response = await printful(
-      `/mockup-generator/printfiles/${productId}`
+      `/mockup-generator/printfiles/${printfulProductId}`
     );
 
     if (response.code !== 200 || !response.result) {
@@ -26,6 +152,7 @@ export async function getPrintFilesForProduct(productId: string) {
       success: true,
       data: {
         productId: result.product_id,
+        requestedProductId: productId,
         availablePlacements: result.available_placements || {},
         printfiles: result.printfiles || [],
         variantPrintfiles: result.variant_printfiles || [],
@@ -49,11 +176,16 @@ export async function createMockupTask(
   productId: string,
   designId: string,
   designImageUrl: string,
-  variantIds: string[] = [],
+  variantIds: Array<string | number> = [],
   placement: string = 'front',
   options?: {
     format?: 'jpg' | 'png';
     width?: number;
+    productOptions?: Record<string, unknown>;
+    optionGroups?: string[];
+    options?: string[];
+    fileOptions?: Array<{ id: string; value: string }>;
+    productTemplateId?: number;
     position?: {
       area_width: number;
       area_height: number;
@@ -64,43 +196,171 @@ export async function createMockupTask(
     };
   }
 ) {
+  const logContext = {
+    productId,
+    designId,
+    placement,
+  };
+
   try {
     const models = await getModels();
-    const { Mockup } = models;
+    const { Mockup, ProductVariant } = models;
 
-    // Build request body
-    const requestBody: any = {
-      variant_ids: variantIds.length > 0 ? variantIds : [productId],
-      format: options?.format || 'jpg',
-      files: [
-        {
-          placement: placement,
-          image_url: designImageUrl,
-        },
-      ],
+    const printfulProductId = await resolvePrintfulProductId(productId);
+    const productContext = await getPrintfulProductContext(printfulProductId);
+    const isCutSew = productContext.productType === 'CUT-SEW';
+    const resolvedPlacement = resolvePlacement(
+      placement,
+      productContext.validPlacements,
+      isCutSew
+    );
+    const createTaskEndpoint = '/mockup-generator/create-task';
+
+    // Convert variant IDs to integers
+    let variantIdsInt = variantIds.length > 0 
+      ? variantIds.map(id => parseInt(String(id), 10))
+      : [];
+    variantIdsInt = variantIdsInt.filter((id) => !Number.isNaN(id));
+
+    // If no variants provided, fetch default variant IDs from Printful
+    if (variantIdsInt.length === 0) {
+      try {
+        console.log(`Fetching variant IDs for product ${printfulProductId}`);
+        const printFilesResponse = await printful(`/mockup-generator/printfiles/${printfulProductId}`);
+        
+        if (Array.isArray(printFilesResponse.result?.variant_printfiles)) {
+          for (const variantPrintfile of printFilesResponse.result.variant_printfiles) {
+            const extractedId = extractVariantId(variantPrintfile);
+            if (extractedId) {
+              variantIdsInt = [extractedId];
+              console.log(`Using default variant ID from Printful: ${variantIdsInt[0]}`);
+              break;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Could not fetch variant IDs:', (error as any).message);
+      }
+
+      // Fallback to Printful product variants endpoint
+      if (variantIdsInt.length === 0) {
+        try {
+          const productResponse = await printful(`/products/${printfulProductId}`);
+          const availableVariants = (productResponse?.result?.variants || [])
+            .filter((variant: any) => variant?.in_stock !== false)
+            .map((variant: any) => Number.parseInt(String(variant?.id), 10))
+            .filter((id: number) => !Number.isNaN(id));
+
+          if (availableVariants.length > 0) {
+            variantIdsInt = [availableVariants[0]];
+            console.log(`Using fallback variant ID from Printful product endpoint: ${variantIdsInt[0]}`);
+          }
+        } catch (error: any) {
+          console.warn('Could not fetch fallback variants from /products/{id}:', error.message);
+        }
+      }
+
+      // Fallback to locally synced product variants
+      if (variantIdsInt.length === 0) {
+        const localVariant = await ProductVariant.findOne({
+          where: { product_id: productId, availability: true },
+          order: [['createdAt', 'ASC']],
+        });
+
+        if (localVariant?.printful_variant_id) {
+          variantIdsInt = [Number(localVariant.printful_variant_id)];
+          console.log(`Using fallback variant ID from database: ${variantIdsInt[0]}`);
+        }
+      }
+
+      if (variantIdsInt.length === 0) {
+        throw new Error('No valid Printful variant IDs available for this product');
+      }
+    }
+
+    // Build request body according to Printful API spec
+    const requestBody: {
+      variant_ids: number[];
+      format: 'jpg' | 'png';
+      files?: Array<{
+        placement: string;
+        image_url: string;
+        position?: {
+          area_width: number;
+          area_height: number;
+          width: number;
+          height: number;
+          top: number;
+          left: number;
+        };
+        options?: Array<{ id: string; value: string }>;
+      }>;
+      width?: number;
+      product_options?: Record<string, unknown>;
+      option_groups?: string[];
+      options?: string[];
+      product_template_id?: number;
+    } = {
+      variant_ids: variantIdsInt,
+      format: (options?.format || 'jpg') as 'jpg' | 'png',
     };
 
-    // Add advanced positioning if provided
-    if (options?.position) {
-      requestBody.width = options.width || 1000;
-      requestBody.files[0].position = options.position;
+    if (options?.productTemplateId) {
+      requestBody.product_template_id = options.productTemplateId;
+    } else {
+      requestBody.files = [
+        {
+          placement: resolvedPlacement,
+          image_url: designImageUrl,
+          // Position defines where on the garment to place the design.
+          position: options?.position || {
+            area_width: 1000,
+            area_height: 1000,
+            width: 800,
+            height: 800,
+            top: 100,
+            left: 100,
+          },
+          ...(options?.fileOptions?.length
+            ? { options: options.fileOptions }
+            : {}),
+        },
+      ];
+    }
+
+    // Add width if provided
+    if (typeof options?.width === 'number') {
+      requestBody.width = Math.min(Math.max(options.width, 50), 2000); // Clamp to API limits
+    }
+
+    if (options?.productOptions) {
+      requestBody.product_options = options.productOptions;
+    }
+
+    if (options?.optionGroups?.length) {
+      requestBody.option_groups = options.optionGroups;
+    }
+
+    if (options?.options?.length) {
+      requestBody.options = options.options;
     }
 
     console.log('Creating mockup task:', {
-      productId,
+      ...logContext,
+      productId: printfulProductId,
       designId,
-      placement,
-      variantIds,
+      placement: resolvedPlacement,
+      requestedPlacement: placement,
+      productType: productContext.productType || 'unknown',
+      endpoint: createTaskEndpoint,
+      variantIds: variantIdsInt,
     });
+    console.log('Request body for Printful:', JSON.stringify(requestBody, null, 2));
 
-    // Call Printful API to create task
-    const response = await printful(
-      `/mockup-generator/create-task/${productId}`,
-      {
-        method: 'POST',
-        body: requestBody,
-      }
-    );
+    const response = await printful(createTaskEndpoint, {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
+    });
 
     if (response.code !== 200 || !response.result) {
       throw new Error(response.error || 'Failed to create mockup task');
@@ -116,12 +376,16 @@ export async function createMockupTask(
       design_id: designId,
       task_key: taskKey,
       status: status || 'pending',
-      placement: placement,
-      variant_id: variantIds[0] || productId,
+      placement: resolvedPlacement,
+      variant_id: String(variantIdsInt[0] || variantIds[0] || ''),
       expires_at: new Date(Date.now() + MOCKUP_URL_EXPIRY_HOURS * 60 * 60 * 1000),
       metadata: {
         created_at: new Date(),
         initial_status: status,
+        printful_product_id: printfulProductId,
+        printful_product_type: productContext.productType,
+        requested_placement: placement,
+        resolved_placement: resolvedPlacement,
       },
     });
 
@@ -132,7 +396,12 @@ export async function createMockupTask(
       status: status,
     };
   } catch (error: any) {
-    console.error('Error creating mockup task:', error);
+    console.error('Error creating mockup task:', {
+      ...logContext,
+      message: error?.message,
+      stack: error?.stack,
+      error,
+    });
     return {
       success: false,
       error: error.message || 'Failed to create mockup task',

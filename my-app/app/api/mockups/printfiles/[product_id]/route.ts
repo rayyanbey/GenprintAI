@@ -19,10 +19,10 @@ import { getPrintFilesForProduct } from '@/src/services/mockup.service';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { product_id: string } }
+  { params }: { params: Promise<{ product_id: string }> }
 ) {
   try {
-    const productId = params.product_id;
+    const { product_id: productId } = await params;
 
     if (!productId) {
       return NextResponse.json(

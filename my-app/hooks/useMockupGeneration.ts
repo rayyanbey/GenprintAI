@@ -63,9 +63,15 @@ export function useMockupGeneration(
       product_id: string;
       design_id: string;
       design_image_url: string;
-      variant_ids?: string[];
+      variant_ids?: Array<string | number>;
       placement?: string;
       format?: 'jpg' | 'png';
+      width?: number;
+      product_options?: Record<string, unknown>;
+      option_groups?: string[];
+      options?: string[];
+      file_options?: Array<{ id: string; value: string }>;
+      product_template_id?: number;
       position?: any;
     }) => {
       try {
@@ -131,7 +137,7 @@ export function useMockupGeneration(
       product_id: string;
       design_id: string;
       design_image_url: string;
-      variant_ids?: string[];
+      variant_ids?: Array<string | number>;
       placements?: string[];
     }) => {
       try {

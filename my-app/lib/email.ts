@@ -48,3 +48,23 @@ export async function sendOrderShippedEmail(
   // TODO: Implement actual email sending
   console.log(`[EMAIL STUB] Order shipped email would be sent to ${email}`, orderData);
 }
+
+export async function sendDesignFeedbackEmail(
+  email: string,
+  feedbackData: {
+    designTitle: string;
+    feedbackMessage: string;
+    designerName: string;
+  }
+): Promise<void> {
+  // TODO: Implement actual email sending
+  console.log(
+    `[EMAIL STUB] Design feedback email would be sent to ${email}`,
+    feedbackData
+  );
+  console.log(`
+  Design: ${feedbackData.designTitle}
+  From Admin: ${feedbackData.designerName}
+  Message: ${feedbackData.feedbackMessage}
+  `);
+}

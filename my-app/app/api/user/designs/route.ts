@@ -83,6 +83,10 @@ export async function GET(request: Request) {
         description: designData.description,
         template_id: designData.template_id,
         created_at: designData.created_at,
+        artwork_file_url: designData.artwork_file_url,
+        approval_status: designData.approval_status || 'pending',
+        admin_feedback: designData.admin_feedback,
+        admin_feedback_date: designData.admin_feedback_date,
         template: designData.Template ? {
           id: designData.Template.id,
           name: designData.Template.name,

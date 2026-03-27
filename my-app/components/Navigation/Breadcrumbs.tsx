@@ -32,6 +32,14 @@ const BREADCRUMB_MAP: Record<string, BreadcrumbItem[]> = {
     { label: 'Home', href: '/home' },
     { label: 'Profile', href: '/profile' },
   ],
+  '/my-designs': [
+    { label: 'Home', href: '/home' },
+    { label: 'My Designs', href: '/my-designs' },
+  ],
+  '/mockup-request': [
+    { label: 'Home', href: '/home' },
+    { label: 'Request Mockup', href: '/mockup-request' },
+  ],
 };
 
 export default function Breadcrumbs() {

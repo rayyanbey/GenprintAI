@@ -1,23 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useRouter } from 'next/navigation';
 import { ProductBrowser } from '@/components/ProductBrowser';
-import { MockupPreviewModal } from '@/components/Mockups';
 import { PageHero } from '@/components/PageHero';
+import { Product } from '@/hooks/useProducts';
 
 export default function ProductsPage() {
-  const [previewProductId, setPreviewProductId] = useState<string | null>(null);
-  const [previewProduct, setPreviewProduct] = useState<any>(null);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const router = useRouter();
 
-  const handlePreview = (productId: string) => {
-    setPreviewProductId(productId);
-    setShowPreviewModal(true);
-  };
-
-  const handleClosePreview = () => {
-    setShowPreviewModal(false);
-    setPreviewProductId(null);
+  const handlePreview = (product: Product) => {
+    router.push(`/mockup-request?productId=${encodeURIComponent(product.id)}`);
   };
 
   return (
@@ -31,16 +24,6 @@ export default function ProductsPage() {
       <div className="bg-white">
         <ProductBrowser onPreview={handlePreview} />
       </div>
-      
-      {previewProductId && (
-        <MockupPreviewModal
-          isOpen={showPreviewModal}
-          onClose={handleClosePreview}
-          productId={previewProductId}
-          productName="Product Preview"
-          price={0}
-        />
-      )}
     </>
   );
 }

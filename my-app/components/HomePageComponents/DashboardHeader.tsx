@@ -43,6 +43,9 @@ export default function DashboardHeader() {
             <Link href="/design" className="text-gray-700 hover:text-gray-900 transition-colors">
               Design
             </Link>
+            <Link href="/mockup-request" className="text-gray-700 hover:text-gray-900 transition-colors">
+              Mockups
+            </Link>
           </div>
 
           {/* Search, Notifications, and Profile */}

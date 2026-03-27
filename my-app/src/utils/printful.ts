@@ -1,6 +1,17 @@
 export const printful = async (endpoint: string, options: RequestInit = {}) => {
 
-    console.log("API",process.env.PRINTFUL);
+    const requestId = `pf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    if (!process.env.PRINTFUL) {
+      console.error('Error: PRINTFUL API key is not set in environment variables');
+      throw new Error('PRINTFUL API key not configured');
+    }
+
+    console.log('[Printful][request:start]', {
+      requestId,
+      method: options.method || 'GET',
+      endpoint,
+    });
   const res = await fetch(`https://api.printful.com/${endpoint}`, {
     ...options,
     headers: {
@@ -14,9 +25,28 @@ export const printful = async (endpoint: string, options: RequestInit = {}) => {
   const data = await res.json();
 
   if(!res.ok){
-    console.error('Printful API Error:', data);
-    throw new Error(data.error || 'Printful API request failed');
+    console.error('[Printful][request:error]', {
+      requestId,
+      method: options.method || 'GET',
+      endpoint,
+      status: res.status,
+      statusText: res.statusText,
+      response: data,
+    });
+    // Handle error response
+    const errorMessage = 
+      typeof data.error === 'string' 
+        ? data.error 
+        : (data.error?.message || data.message || 'Printful API request failed');
+    throw new Error(errorMessage);
   }
+
+  console.log('[Printful][request:success]', {
+    requestId,
+    method: options.method || 'GET',
+    endpoint,
+    status: res.status,
+  });
 
   return data;
 };

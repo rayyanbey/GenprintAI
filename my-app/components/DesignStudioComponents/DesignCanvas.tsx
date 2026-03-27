@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { RotateCcw, Loader2, AlertCircle, ChevronDown, Download, Eye } from 'lucide-react';
+import { RotateCcw, Loader2, AlertCircle, ChevronDown, Download, Eye, Save, X } from 'lucide-react';
 import MockupPreviewModalAsync from '../Mockups/MockupPreviewModalAsync';
 
 export default function DesignCanvas() {
@@ -12,6 +12,11 @@ export default function DesignCanvas() {
   const [isGeneratingTrend, setIsGeneratingTrend] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showMockupModal, setShowMockupModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveTitle, setSaveTitle] = useState('');
+  const [saveDescription, setSaveDescription] = useState('');
   const [selectedProductId, setSelectedProductId] = useState<string>('1'); // Default product
 
   // Step 1: Extract trend from prompt using Groq
@@ -84,6 +89,59 @@ export default function DesignCanvas() {
     setShowMockupModal(true);
   };
 
+  const handleSaveDesignClick = () => {
+    if (!generatedImage) {
+      setError('Please generate a design first');
+      return;
+    }
+    setShowSaveModal(true);
+  };
+
+  const handleSaveDesignSubmit = async () => {
+    if (!saveTitle.trim()) {
+      setError('Please enter a design title');
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/designs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: saveTitle.trim(),
+          description: saveDescription.trim(),
+          artwork_file_url: generatedImage,
+          export_format: 'png',
+          tags: ['ai-generated'],
+          metadata: { prompt },
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to save design');
+      }
+
+      setSaveSuccess(true);
+      setSaveTitle('');
+      setSaveDescription('');
+      setShowSaveModal(false);
+
+      // Show success message briefly
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to save design');
+      console.error('Design save error:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="flex-1 bg-gray-50 flex flex-col">
       {/* Main Content */}
@@ -101,7 +159,14 @@ export default function DesignCanvas() {
 
           {/* Action Buttons - Only show if image generated */}
           {generatedImage && (
-            <div className="flex items-center gap-4 mb-8">
+            <div className="flex items-center gap-4 mb-8 flex-wrap justify-center">
+              <button
+                onClick={handleSaveDesignClick}
+                className="flex items-center gap-2 px-4 py-2 text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                <span className="text-sm font-medium">Save Design</span>
+              </button>
               <button
                 onClick={handleRegenerateMockup}
                 className="flex items-center gap-2 px-4 py-2 text-white bg-[#f4978e] border border-[#f4978e] rounded-lg hover:bg-[#f08080] transition-colors"
@@ -187,6 +252,88 @@ export default function DesignCanvas() {
           </p>
         </div>
       </div>
+
+      {/* Success Message */}
+      {saveSuccess && (
+        <div className="fixed bottom-4 right-4 p-4 bg-green-50 border border-green-200 rounded-lg shadow-lg flex gap-3 items-center max-w-md">
+          <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+          <p className="text-sm text-green-700 font-medium">Design saved successfully! You can now request mockups.</p>
+        </div>
+      )}
+
+      {/* Save Design Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Save Design</h2>
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Title Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Design Title *
+                </label>
+                <input
+                  type="text"
+                  value={saveTitle}
+                  onChange={(e) => setSaveTitle(e.target.value)}
+                  placeholder="e.g., 'Cosmic Cat Design'"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none text-sm"
+                />
+              </div>
+
+              {/* Description Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description (optional)
+                </label>
+                <textarea
+                  value={saveDescription}
+                  onChange={(e) => setSaveDescription(e.target.value)}
+                  placeholder="Add a description for this design..."
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none text-sm resize-none"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowSaveModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveDesignSubmit}
+                  disabled={isSaving || !saveTitle.trim()}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save Design
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mockup Preview Modal */}
       <MockupPreviewModalAsync

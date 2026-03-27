@@ -45,6 +45,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/mockup-request" className="text-gray-400 hover:text-white transition-colors">
+                  Request Mockup
+                </Link>
+              </li>
+              <li>
                 <Link href="/orders" className="text-gray-400 hover:text-white transition-colors">
                   My Orders
                 </Link>

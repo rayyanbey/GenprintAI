@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, template_id, canvas_data, tags, metadata } = body;
+    const { title, description, template_id, canvas_data, tags, metadata, artwork_file_url, export_format } = body;
 
     if (!title) {
       return NextResponse.json(
@@ -59,6 +59,8 @@ export async function POST(request: Request) {
       canvas_data,
       tags,
       metadata,
+      artwork_file_url,
+      export_format,
     });
 
     return NextResponse.json(
