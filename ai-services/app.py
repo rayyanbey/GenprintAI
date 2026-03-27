@@ -10,6 +10,7 @@ import base64
 from io import BytesIO
 import cloudinary
 import cloudinary.uploader
+from preprocessing import preprocess_prompt
 
 
 ##http://localhost:8000/
@@ -22,6 +23,7 @@ cloudinary.config(
     api_key=os.getenv("CLOUDINARY_API_KEY"),
     api_secret=os.getenv("CLOUDINARY_API_SECRET"),
 )
+
 
 
 app = FastAPI()
@@ -84,9 +86,10 @@ Trend:
 @app.post("/generate-design")
 def generate_design(req: TextRequest):
     try:
+        prompt=preprocess_prompt(req.text)
         # 1. Generate image using Hugging Face
         image = hf_client.text_to_image(
-            req.text,
+            prompt,
             model="black-forest-labs/FLUX.1-schnell",
         )
 
