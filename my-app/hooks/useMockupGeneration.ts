@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 interface MockupGenerationState {
   taskKey: string | null;
@@ -53,7 +53,31 @@ export function useMockupGeneration(
   });
 
   const [retryCount, setRetryCount] = useState(0);
-  const [pollingIntervalId, setPollingIntervalId] = useState<NodeJS.Timeout | null>(null);
+  const [pollAttemptCount, setPollAttemptCount] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef(0);
+  const pollAttemptRef = useRef(0);
+
+  const stopPolling = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  const incrementRetryCount = useCallback(() => {
+    const next = retryCountRef.current + 1;
+    retryCountRef.current = next;
+    setRetryCount(next);
+    return next;
+  }, []);
+
+  const incrementPollAttempt = useCallback(() => {
+    const next = pollAttemptRef.current + 1;
+    pollAttemptRef.current = next;
+    setPollAttemptCount(next);
+    return next;
+  }, []);
 
   /**
    * Create a mockup generation task
@@ -107,7 +131,10 @@ export function useMockupGeneration(
           progress: 15,
         }));
 
+        retryCountRef.current = 0;
+        pollAttemptRef.current = 0;
         setRetryCount(0);
+        setPollAttemptCount(0);
 
         // Auto-start polling if enabled
         if (autoStart) {
@@ -179,7 +206,10 @@ export function useMockupGeneration(
           progress: 15,
         }));
 
+        retryCountRef.current = 0;
+        pollAttemptRef.current = 0;
         setRetryCount(0);
+        setPollAttemptCount(0);
 
         // Start polling all task keys
         if (autoStart && data.taskKeys.length > 0) {
@@ -205,14 +235,41 @@ export function useMockupGeneration(
    * Poll single task
    */
   const pollTask = useCallback(async (taskKey: string) => {
+    const attempts = incrementPollAttempt();
+
+    if (attempts >= maxRetries) {
+      setState(prev => ({
+        ...prev,
+        status: 'failed',
+        error: `Mockup generation timeout after ${maxRetries} polling attempts`,
+        progress: 0,
+      }));
+      return true;
+    }
+
     try {
       const response = await fetch(`/api/mockups/status/${taskKey}`);
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        if (data?.status === 'failed') {
+          setState(prev => ({
+            ...prev,
+            status: 'failed',
+            error: data.error || 'Mockup generation failed',
+            progress: 0,
+          }));
+          return true;
+        }
+
+        throw new Error(`API error: ${response.status}`);
+      }
 
       if (data.status === 'completed') {
         setState(prev => ({
@@ -233,10 +290,10 @@ export function useMockupGeneration(
         return false; // Still processing
       }
     } catch (error: any) {
-      setRetryCount(prev => prev + 1);
+      const retries = incrementRetryCount();
       console.error('Poll error:', error);
 
-      if (retryCount >= maxRetries) {
+      if (retries >= maxRetries) {
         setState(prev => ({
           ...prev,
           status: 'failed',
@@ -248,7 +305,7 @@ export function useMockupGeneration(
     }
 
     return false;
-  }, [retryCount, maxRetries]);
+  }, [incrementPollAttempt, incrementRetryCount, maxRetries]);
 
   /**
    * Poll multiple tasks in parallel
@@ -282,13 +339,13 @@ export function useMockupGeneration(
         }
       };
 
-      const intervalId = setInterval(pollLoop, pollInterval);
-      setPollingIntervalId(intervalId);
+      stopPolling();
+      intervalRef.current = setInterval(pollLoop, pollInterval);
 
       // Run first poll immediately
       await pollLoop();
     },
-    [pollTask, pollInterval]
+    [pollTask, pollInterval, stopPolling]
   );
 
   /**
@@ -297,15 +354,18 @@ export function useMockupGeneration(
   const startPolling = useCallback(
     (taskKey: string) => {
       // Clear any existing polling
-      if (pollingIntervalId) {
-        clearInterval(pollingIntervalId);
-      }
+      stopPolling();
 
       setState(prev => ({
         ...prev,
         taskKey,
         status: 'pending',
       }));
+
+      retryCountRef.current = 0;
+      pollAttemptRef.current = 0;
+      setRetryCount(0);
+      setPollAttemptCount(0);
 
       // Poll immediately
       const poll = async () => {
@@ -318,21 +378,10 @@ export function useMockupGeneration(
       poll();
 
       // Set up interval polling
-      const intervalId = setInterval(poll, pollInterval);
-      setPollingIntervalId(intervalId);
+      intervalRef.current = setInterval(poll, pollInterval);
     },
-    [pollTask, pollInterval]
+    [pollTask, pollInterval, stopPolling]
   );
-
-  /**
-   * Stop polling
-   */
-  const stopPolling = useCallback(() => {
-    if (pollingIntervalId) {
-      clearInterval(pollingIntervalId);
-      setPollingIntervalId(null);
-    }
-  }, [pollingIntervalId]);
 
   /**
    * Reset state
@@ -346,7 +395,16 @@ export function useMockupGeneration(
       error: null,
       progress: 0,
     });
+    retryCountRef.current = 0;
+    pollAttemptRef.current = 0;
     setRetryCount(0);
+    setPollAttemptCount(0);
+  }, [stopPolling]);
+
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
   }, [stopPolling]);
 
   return {
@@ -357,6 +415,7 @@ export function useMockupGeneration(
     error: state.error,
     progress: state.progress,
     retryCount,
+    pollAttemptCount,
 
     // Methods
     generateMockup,

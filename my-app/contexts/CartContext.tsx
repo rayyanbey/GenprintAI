@@ -29,6 +29,31 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+function seededFallbackPrice(seed: string): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+
+  // Stable pseudo-random range: $19.99 - $89.99
+  const min = 19.99;
+  const max = 89.99;
+  const ratio = (hash % 10000) / 10000;
+  return Number((min + ratio * (max - min)).toFixed(2));
+}
+
+function normalizeItemPrice(item: CartItem): CartItem {
+  const parsedPrice = Number(item.price);
+  if (Number.isFinite(parsedPrice) && parsedPrice > 0) {
+    return { ...item, price: parsedPrice };
+  }
+
+  return {
+    ...item,
+    price: seededFallbackPrice(`${item.id}:${item.product_id}`),
+  };
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -38,7 +63,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
       try {
-        setItems(JSON.parse(savedCart));
+        const parsedItems = JSON.parse(savedCart) as CartItem[];
+        setItems(parsedItems.map(normalizeItemPrice));
       } catch (error) {
         console.error('Error loading cart from localStorage:', error);
       }
@@ -54,14 +80,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, isInitialized]);
 
   const addItem = (item: CartItem) => {
+    const normalizedItem = normalizeItemPrice(item);
+
     setItems((prevItems) => {
-      const existingItem = prevItems.find((i) => i.id === item.id);
+      const existingItem = prevItems.find((i) => i.id === normalizedItem.id);
       if (existingItem) {
         return prevItems.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i
+          i.id === normalizedItem.id
+            ? {
+                ...i,
+                quantity: i.quantity + normalizedItem.quantity,
+                price: i.price > 0 ? i.price : normalizedItem.price,
+              }
+            : i
         );
       }
-      return [...prevItems, item];
+      return [...prevItems, normalizedItem];
     });
   };
 

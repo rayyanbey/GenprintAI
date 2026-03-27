@@ -5,7 +5,11 @@ import { useCart } from '@/contexts/CartContext';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import { useRouter } from 'next/navigation';
 
-export default function CheckoutForm() {
+interface CheckoutFormProps {
+  paymentIntentId: string;
+}
+
+export default function CheckoutForm({ paymentIntentId }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const { totalPrice, items, clearCart } = useCart();
@@ -47,6 +51,28 @@ export default function CheckoutForm() {
 
       if (!orderResponse.ok) {
         throw new Error(orderData.error);
+      }
+
+      const createdOrderIds: string[] = Array.isArray(orderData?.orders)
+        ? orderData.orders.map((order: any) => String(order?.id || '')).filter((id: string) => id.length > 0)
+        : [];
+
+      if (createdOrderIds.length === 0) {
+        throw new Error('No orders were created for this checkout');
+      }
+
+      const attachResponse = await fetch('/api/payment/attach-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_intent_id: paymentIntentId,
+          order_ids: createdOrderIds,
+        }),
+      });
+
+      const attachData = await attachResponse.json();
+      if (!attachResponse.ok || !attachData.success) {
+        throw new Error(attachData.error || 'Failed to link orders to payment');
       }
 
       // Confirm payment

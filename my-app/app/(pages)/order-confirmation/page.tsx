@@ -8,19 +8,64 @@ import { CheckCircle, Package } from 'lucide-react';
 export default function OrderConfirmationPage() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [statusMessage, setStatusMessage] = useState<string>('Processing your order...');
 
   useEffect(() => {
     const paymentIntent = searchParams.get('payment_intent');
     const paymentIntentClientSecret = searchParams.get('payment_intent_client_secret');
     const redirectStatus = searchParams.get('redirect_status');
 
-    if (redirectStatus === 'succeeded') {
-      setStatus('success');
-    } else if (redirectStatus === 'failed') {
-      setStatus('error');
-    } else {
-      setStatus('loading');
-    }
+    const confirmAndFinalize = async () => {
+      if (!paymentIntent && !paymentIntentClientSecret) {
+        setStatus('error');
+        setStatusMessage('Payment information is missing from the return URL.');
+        return;
+      }
+
+      if (redirectStatus !== 'succeeded' && redirectStatus !== 'failed') {
+        setStatus('loading');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/checkout/confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            payment_intent_id: paymentIntent,
+            payment_intent_client_secret: paymentIntentClientSecret,
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data?.success) {
+          setStatus('error');
+          setStatusMessage(data?.error || 'Could not verify payment status.');
+          return;
+        }
+
+        const paymentStatus = String(data?.payment_status || '').toLowerCase();
+
+        if (paymentStatus === 'succeeded') {
+          setStatus('success');
+          return;
+        }
+
+        if (paymentStatus === 'processing' || paymentStatus === 'requires_capture') {
+          setStatus('loading');
+          setStatusMessage('Your payment is processing. This can take a few moments...');
+          return;
+        }
+
+        setStatus('error');
+        setStatusMessage(`Payment status: ${paymentStatus || 'unknown'}`);
+      } catch {
+        setStatus('error');
+        setStatusMessage('Failed to verify payment confirmation.');
+      }
+    };
+
+    confirmAndFinalize();
   }, [searchParams]);
 
   if (status === 'loading') {
@@ -28,7 +73,7 @@ export default function OrderConfirmationPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Processing your order...</p>
+          <p className="mt-4 text-gray-600">{statusMessage}</p>
         </div>
       </div>
     );
@@ -46,6 +91,7 @@ export default function OrderConfirmationPage() {
             <p className="text-gray-600">
               There was an issue processing your payment. Please try again.
             </p>
+            <p className="text-sm text-gray-500 mt-2">{statusMessage}</p>
           </div>
           <Link
             href="/cart"

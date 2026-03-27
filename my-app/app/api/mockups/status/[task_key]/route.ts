@@ -40,19 +40,16 @@ export async function GET(
 
     const result = await checkMockupStatus(taskKey);
 
-    if (!result.success && result.status !== 'pending') {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 500 }
-      );
+    // Terminal workflow statuses should be returned as 200 so clients can stop polling.
+    if (result.status === 'pending' || result.status === 'completed' || result.status === 'failed') {
+      return NextResponse.json(result, { status: 200 });
     }
 
-    // Return appropriate status code:
-    // 200 for pending/completed
-    // 500 for errors
-    return NextResponse.json(result, {
-      status: result.success ? 200 : 500,
-    });
+    // Non-workflow errors (missing task, upstream/runtime issues) stay as server errors.
+    return NextResponse.json(
+      { success: false, error: result.error || 'Failed to check mockup status' },
+      { status: 500 }
+    );
   } catch (error: any) {
     console.error('Error checking mockup status:', error);
     return NextResponse.json(

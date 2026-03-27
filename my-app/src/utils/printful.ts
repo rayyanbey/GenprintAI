@@ -38,7 +38,13 @@ export const printful = async (endpoint: string, options: RequestInit = {}) => {
       typeof data.error === 'string' 
         ? data.error 
         : (data.error?.message || data.message || 'Printful API request failed');
-    throw new Error(errorMessage);
+    const err: any = new Error(errorMessage);
+    err.status = res.status;
+    err.statusText = res.statusText;
+    err.result = data?.result;
+    err.error = data?.error;
+    err.raw = data;
+    throw err;
   }
 
   console.log('[Printful][request:success]', {

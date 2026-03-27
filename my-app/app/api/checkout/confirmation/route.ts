@@ -1,31 +1,22 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { getModels } from '@/lib/db-dynamic';
+import { Op } from 'sequelize';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { payment_intent_client_secret } = body;
+    const { payment_intent_client_secret, payment_intent_id } = body;
 
-    if (!payment_intent_client_secret) {
+    if (!payment_intent_client_secret && !payment_intent_id) {
       return NextResponse.json(
-        { success: false, error: 'Missing payment_intent_client_secret' },
+        { success: false, error: 'Missing payment_intent identifier' },
         { status: 400 }
       );
     }
 
-    // Retrieve payment intent from Stripe
-    const paymentIntents = await stripe.paymentIntents.list({
-      limit: 1,
-    });
-
-    let paymentIntent = null;
-    for (const pi of paymentIntents.data) {
-      if (pi.client_secret === payment_intent_client_secret) {
-        paymentIntent = pi;
-        break;
-      }
-    }
+    const resolvedPaymentIntentId = payment_intent_id || String(payment_intent_client_secret).split('_secret_')[0];
+    const paymentIntent = await stripe.paymentIntents.retrieve(resolvedPaymentIntentId);
 
     if (!paymentIntent) {
       return NextResponse.json(
@@ -34,59 +25,104 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get order from metadata
-    const orderId = paymentIntent.metadata?.order_id;
-    
-    if (!orderId) {
-      return NextResponse.json(
-        { success: false, error: 'Order ID not found in payment intent' },
-        { status: 400 }
-      );
-    }
+    const orderIdsFromMetadata = String(paymentIntent.metadata?.order_ids || '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+    const orderIdFallback = String(paymentIntent.metadata?.order_id || '').trim();
+    const orderIds = orderIdsFromMetadata.length > 0
+      ? orderIdsFromMetadata
+      : orderIdFallback
+      ? [orderIdFallback]
+      : [];
 
     const models = await getModels();
-    const { Order, OrderItem, User } = models;
+    const { Order, User } = models;
 
-    const order = await Order.findByPk(orderId, {
-      include: [
-        { model: User, attributes: ['id', 'username', 'email', 'full_name'] },
-        {
-          model: OrderItem,
-          attributes: ['id', 'product_id', 'product_name', 'quantity', 'price', 'variant_sku'],
-        },
-      ],
-    });
+    let existingOrders: any[] = [];
 
-    if (!order) {
-      return NextResponse.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
+    if (orderIds.length > 0) {
+      const orders = await Promise.all(
+        orderIds.map((orderId) =>
+          Order.findByPk(orderId, {
+            include: [{ model: User, attributes: ['id', 'username', 'email', 'full_name'] }],
+          })
+        )
       );
+      existingOrders = orders.filter(Boolean);
     }
 
-    // Update order status if payment succeeded
-    if (paymentIntent.status === 'succeeded' && order.status === 'pending_payment') {
-      order.status = 'paid';
-      await order.save();
+    // Fallback for older payment intents where metadata is missing.
+    if (existingOrders.length === 0) {
+      existingOrders = await Order.findAll({
+        where: {
+          [Op.or]: [{ payment_intent_id: paymentIntent.id }],
+        },
+        include: [{ model: User, attributes: ['id', 'username', 'email', 'full_name'] }],
+      });
     }
 
-    const formattedOrder = {
+    // Do not fail hard if order linkage is not present yet. Return payment status to UI.
+    if (existingOrders.length === 0) {
+      return NextResponse.json({
+        success: true,
+        payment_status: paymentIntent.status,
+        payment_intent_id: paymentIntent.id,
+        orders: [],
+        warning: 'No linked orders found yet for this payment intent.',
+      });
+    }
+
+    if (paymentIntent.status === 'succeeded') {
+      for (const order of existingOrders) {
+        const needsUpdate = order.status !== 'paid' || order.payment_intent_id !== paymentIntent.id;
+        if (needsUpdate) {
+          await order.update({
+            status: 'paid',
+            payment_intent_id: paymentIntent.id,
+          });
+
+          try {
+            const userEmail = order.User?.email;
+            if (userEmail) {
+              const { sendOrderConfirmationEmail } = await import('@/lib/email');
+              await sendOrderConfirmationEmail(userEmail, {
+                orderId: order.id,
+                orderDate: order.order_date,
+                totalAmount: Number.parseFloat(String(order.total_amount || 0)),
+                paymentIntentId: paymentIntent.id,
+                items: [
+                  {
+                    name: order.product_name,
+                    quantity: Number(order.quantity || 1),
+                    price: Number.parseFloat(String(order.product_price || 0)),
+                  },
+                ],
+              });
+            }
+          } catch (emailError) {
+            console.error('Error sending confirmation email from confirmation route:', emailError);
+          }
+        }
+      }
+    }
+
+    const formattedOrders = existingOrders.map((order: any) => ({
       id: order.id,
-      order_number: order.order_number,
-      created_at: order.created_at,
+      created_at: order.createdAt,
       total_amount: order.total_amount,
       status: order.status,
       shipping_address: order.shipping_address,
-      items: (order.OrderItems || []).map((item: any) => ({
-        product_id: item.product_id,
-        product_name: item.product_name,
-        quantity: item.quantity,
-        price: item.price,
-        variant_sku: item.variant_sku,
-      })),
-    };
+      product_name: order.product_name,
+      quantity: order.quantity,
+    }));
 
-    return NextResponse.json({ success: true, order: formattedOrder });
+    return NextResponse.json({
+      success: true,
+      payment_status: paymentIntent.status,
+      payment_intent_id: paymentIntent.id,
+      orders: formattedOrders,
+    });
   } catch (error: any) {
     console.error('Error confirming order:', error);
     return NextResponse.json(

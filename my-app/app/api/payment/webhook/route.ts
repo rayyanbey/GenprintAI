@@ -49,46 +49,69 @@ async function handlePaymentSuccess(paymentIntent: any) {
     const models = await getModels();
     const { Order, User } = models;
 
-    // Update order status
-    const orderId = paymentIntent.metadata.order_id;
-    if (orderId) {
-      const order = await Order.findByPk(orderId);
-      
-      if (order) {
+    const metadataOrderIds = String(paymentIntent?.metadata?.order_ids || '')
+      .split(',')
+      .map((id: string) => id.trim())
+      .filter((id: string) => id.length > 0);
+    const fallbackOrderId = String(paymentIntent?.metadata?.order_id || '').trim();
+
+    const orderIds = metadataOrderIds.length > 0
+      ? metadataOrderIds
+      : fallbackOrderId
+      ? [fallbackOrderId]
+      : [];
+
+    let orders: any[] = [];
+
+    if (orderIds.length > 0) {
+      orders = await Promise.all(orderIds.map((orderId: string) => Order.findByPk(orderId)));
+      orders = orders.filter(Boolean);
+    }
+
+    // Fallback lookup when metadata is missing but DB has payment_intent_id linked.
+    if (orders.length === 0) {
+      orders = await Order.findAll({ where: { payment_intent_id: paymentIntent.id } });
+    }
+
+    for (const order of orders) {
+      const wasAlreadyPaid = order.status === 'paid';
+
+      if (!wasAlreadyPaid) {
         await order.update({
           status: 'paid',
           payment_intent_id: paymentIntent.id,
         });
 
-        console.log(`Order ${orderId} marked as paid`);
-        
-        // Send confirmation email
+        console.log(`Order ${order.id} marked as paid`);
+
         try {
           const user = await User.findByPk(order.user_id);
-          if (user && user.email) {
+          if (user?.email) {
             const { sendOrderConfirmationEmail } = await import('@/lib/email');
             await sendOrderConfirmationEmail(user.email, {
               orderId: order.id,
               orderDate: order.order_date,
-              totalAmount: parseFloat(order.total_amount),
-              items: [{
-                name: order.product_name,
-                quantity: order.quantity,
-                price: parseFloat(order.product_price),
-              }],
+              totalAmount: Number.parseFloat(String(order.total_amount || 0)),
+              paymentIntentId: paymentIntent.id,
+              items: [
+                {
+                  name: order.product_name,
+                  quantity: Number(order.quantity || 1),
+                  price: Number.parseFloat(String(order.product_price || 0)),
+                },
+              ],
             });
           }
         } catch (emailError) {
           console.error('Error sending confirmation email:', emailError);
-          // Don't fail the webhook if email fails
         }
-        
-        // Auto-trigger Printful order creation
+      }
+
+      if (!order.printful_order_id) {
         try {
           await createPrintfulOrderFromPayment(order);
         } catch (printfulError) {
           console.error('Error creating Printful order:', printfulError);
-          // Don't fail the webhook if Printful order creation fails
         }
       }
     }

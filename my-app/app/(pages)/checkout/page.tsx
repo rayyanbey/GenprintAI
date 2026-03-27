@@ -13,6 +13,7 @@ export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
   const router = useRouter();
   const [clientSecret, setClientSecret] = useState('');
+  const [paymentIntentId, setPaymentIntentId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +50,7 @@ export default function CheckoutPage() {
       }
 
       setClientSecret(data.clientSecret);
+      setPaymentIntentId(data.paymentIntentId || '');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -89,9 +91,9 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-2xl mx-auto">
-        {clientSecret && (
+        {clientSecret && paymentIntentId && (
           <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <CheckoutForm />
+            <CheckoutForm paymentIntentId={paymentIntentId} />
           </Elements>
         )}
       </div>
