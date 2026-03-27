@@ -206,7 +206,7 @@ export default function HomePage() {
                 Refresh
               </Button>
               <Button asChild className="bg-[#f4978e] text-white hover:bg-[#f08080]">
-                <Link href="/design-studio">Create New Design</Link>
+                <Link href="/design">Create New Design</Link>
               </Button>
             </div>
           </div>
