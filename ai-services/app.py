@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +10,8 @@ import base64
 from io import BytesIO
 import cloudinary
 import cloudinary.uploader
+import cloudinary.api
+from google import genai
 
 
 ##http://localhost:8000/
@@ -17,6 +19,7 @@ load_dotenv()
 
 HF_API_KEY = os.getenv("HF_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
     api_key=os.getenv("CLOUDINARY_API_KEY"),
@@ -48,9 +51,13 @@ client = Groq(api_key=GROQ_API_KEY)
 class TextRequest(BaseModel):
     text: str
 
+
+
 @app.get("/")
 def home():
     return {"instruction": "add /docs to access Swagger UI"}
+
+
 
 
 @app.post("/embed")
@@ -58,6 +65,18 @@ def embed_text(req: TextRequest):
     embedding = model.encode(req.text).tolist()
     return {"embedding": embedding}
 
+
+
+
+@app.post("/check-prompt")
+def check_prompt(req:TextRequest):
+    user_prompt = req.text
+    client = genai.Client(GEMINI_API_KEY)
+    response = client.models.generate_content(
+        model="gemini-3-flash-preview",
+        contents="this is """ + user_prompt + """ to generate an image. Label this prompt as valid or in valid with a brief explanation with comma separating the label and explanation e.g (valid/invalid, explanation). Only return the label and explanation.",""",
+    )
+    return {"response": response.text}
 
 @app.post("/extract-trend")
 def extract_trend(req: TextRequest):
