@@ -2,7 +2,7 @@ from google import genai
 
 def check_prompt(prompt: str) -> str:
     # Initialize the client with your API key
-    client = genai.Client(api_key="AIzaSyDGmh1Rpf2qy1g6rajXOtY4Xfh4BapHDCM")
+    client = genai.Client(api_key="OKYAAR")
     
     # Define the instruction for the model
     instruction = (
