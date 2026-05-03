@@ -4,3 +4,6 @@ sentence-transformers
 groq
 cloudinary
 dotenv
+google-genai
+huggingface-hub
+pydantic

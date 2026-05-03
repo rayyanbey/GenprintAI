@@ -3,6 +3,9 @@
 import React, { useState, useCallback } from 'react';
 import { RotateCcw, Loader2, AlertCircle, ChevronDown, Download, Eye, Save, X } from 'lucide-react';
 import MockupPreviewModalAsync from '../Mockups/MockupPreviewModalAsync';
+import { ChatBot } from '../ChatWidget/ChatBot';
+import { DesignSuggestions } from './DesignSuggestions';
+import { SuggestedPrompt } from '@/src/services/chat.service';
 
 export default function DesignCanvas() {
   const [prompt, setPrompt] = useState('');
@@ -18,6 +21,14 @@ export default function DesignCanvas() {
   const [saveTitle, setSaveTitle] = useState('');
   const [saveDescription, setSaveDescription] = useState('');
   const [selectedProductId, setSelectedProductId] = useState<string>('1'); // Default product
+
+  // Handle prompt selection from ChatBot
+  const handlePromptSelected = useCallback((prompt: SuggestedPrompt) => {
+    setPrompt(prompt.text);
+    // Optionally auto-generate design with the selected prompt
+    // Uncomment the line below to auto-generate:
+    // handleGenerateDesign();
+  }, []);
 
   // Step 1: Extract trend from prompt using Groq
   const generateTrend = useCallback(async (text: string) => {
@@ -218,6 +229,14 @@ export default function DesignCanvas() {
 
         {/* Prompt Input - Fixed at Bottom */}
         <div className="w-full max-w-3xl pb-4">
+          {/* Design Suggestions */}
+          <DesignSuggestions
+            productType={selectedProductId}
+            onSuggestionClick={(suggestion) => {
+              setPrompt(suggestion);
+            }}
+          />
+
           <div className="flex gap-3 items-center">
             <input
               type="text"
@@ -344,6 +363,12 @@ export default function DesignCanvas() {
         price={24.99}
         designId={generatedDesignId || undefined}
         designImageUrl={generatedImage || undefined}
+      />
+
+      {/* Chat Widget */}
+      <ChatBot
+        onPromptSelected={handlePromptSelected}
+        productType={selectedProductId}
       />
     </div>
   );
