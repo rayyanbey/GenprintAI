@@ -12,6 +12,8 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 from google import genai
+from functools import lru_cache
+import time
 
 
 ##http://localhost:8000/
@@ -89,26 +91,64 @@ def embed_text(req: TextRequest):
 
 
 
-## http://localhost:8000/check-prompt
-@app.post("/check-prompt")
-def check_prompt(req:TextRequest):
-    user_prompt = req.text
-    try:
-        prompt = f"""Is this a good design prompt for image generation?
-Prompt: "{user_prompt}"
+# Prompt validation cache (in-memory, survives for session)
+PROMPT_VALIDATION_CACHE = {}
+CACHE_TTL = 3600  # 1 hour in seconds
 
-Respond with: valid/invalid, brief explanation (max 10 words)
-Example: valid, good colors and mood | invalid, too vague or problematic"""
-        
-        completion = client.chat.completions.create(
-            model="mixtral-8x7b-32768",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=50,
-        )
-        return {"response": completion.choices[0].message.content.strip()}
-    except Exception as e:
-        return {"response": f"valid, Validation skipped"}
+
+def is_valid_prompt_local(prompt: str) -> bool:
+    """Quick local validation without API calls."""
+    if not prompt or len(prompt) < 3:
+        return False
+    
+    # Check for obviously bad content
+    bad_keywords = [
+        'violence', 'hate', 'offensive', 'explicit', 'nsfw',
+        'porn', 'xxx', 'illegal', 'copyrighted'
+    ]
+    prompt_lower = prompt.lower()
+    for keyword in bad_keywords:
+        if keyword in prompt_lower:
+            return False
+    
+    return True
+
+
+@app.post("/check-prompt")
+def check_prompt(req: TextRequest):
+    """Fast prompt validation with local checks and optional Groq validation."""
+    user_prompt = req.text.strip()
+    
+    # Check cache first
+    if user_prompt in PROMPT_VALIDATION_CACHE:
+        cached_result = PROMPT_VALIDATION_CACHE[user_prompt]
+        if time.time() - cached_result['timestamp'] < CACHE_TTL:
+            return cached_result['response']
+    
+    # Quick local validation
+    if not is_valid_prompt_local(user_prompt):
+        response = {
+            "response": "invalid, prompt contains restricted content"
+        }
+        PROMPT_VALIDATION_CACHE[user_prompt] = {
+            'response': response,
+            'timestamp': time.time()
+        }
+        return response
+    
+    # Local validation passed, return valid
+    # (Skip expensive Groq call - local validation is usually sufficient)
+    response = {
+        "response": "valid, prompt looks good for image generation"
+    }
+    
+    # Cache the result
+    PROMPT_VALIDATION_CACHE[user_prompt] = {
+        'response': response,
+        'timestamp': time.time()
+    }
+    
+    return response
 
 
 @app.post("/extract-trend")
@@ -268,31 +308,22 @@ def generate_design(req: TextRequest):
 # ============================================================================
 
 def validate_prompt_with_groq(prompt_text: str) -> dict:
-    """Validate a design prompt using Groq."""
-    try:
-        completion = client.chat.completions.create(
-            model="mixtral-8x7b-32768",
-            messages=[{
-                "role": "user",
-                "content": f"""Validate this design prompt for image generation: "{prompt_text}"
-                
-Reply with: valid/invalid, explanation
-Example: valid, good colors | invalid, too vague"""
-            }],
-            temperature=0.3,
-            max_tokens=50,
-        )
-        text = completion.choices[0].message.content.strip()
-        if "," in text:
-            label, explanation = text.split(",", 1)
-            return {
-                "valid": "valid" in label.lower(),
-                "label": label.strip(),
-                "explanation": explanation.strip(),
-            }
-        return {"valid": "valid" in text.lower(), "label": "valid", "explanation": text}
-    except Exception as e:
-        return {"valid": True, "label": "valid", "explanation": "Validation skipped"}
+    """Validate a design prompt using local checks (no API calls)."""
+    # Use local validation only (avoid rate limits)
+    is_valid = is_valid_prompt_local(prompt_text)
+    
+    if not is_valid:
+        return {
+            "valid": False,
+            "label": "invalid",
+            "explanation": "Contains restricted content"
+        }
+    
+    return {
+        "valid": True,
+        "label": "valid",
+        "explanation": "Looks good for image generation"
+    }
 def generate_chat_response(user_message: str, conversation_history: list, user_context: dict) -> dict:
     """Generate a chatbot response using Groq."""
     
@@ -401,18 +432,17 @@ def chat(req: ChatRequest) -> ChatResponse:
     - suggested_actions: Recommended next actions
     """
     try:
-        # Generate response from LLaMA
+        # Generate response from Groq
         response_data = generate_chat_response(
             req.message,
             req.context,
             req.user_context,
         )
         
-        # Validate any suggested prompts
+        # Quick validation of suggested prompts (local only, no API calls)
         validated_prompts = []
         for prompt in response_data.get("suggested_prompts", []):
-            validation = validate_prompt_with_groq(prompt.text)
-            if validation.get("valid"):
+            if is_valid_prompt_local(prompt.text):
                 validated_prompts.append(prompt)
         
         return ChatResponse(

@@ -28,7 +28,7 @@ export default function Header() {
         {/* Auth Buttons */}
         <div className="flex items-center gap-4">
           <Link href="/login" className="">
-            <button className="px-6 py-2 text-gray-700 hover:text-gray-900 transition-colors">
+            <button className="px-6 py-2 text-gray-700 hover:text-gray-900 transition-colors cursor-pointer hover:text-gray-900">
               Login
             </button>
           </Link>
@@ -39,4 +39,6 @@ export default function Header() {
       </nav>
     </header>
   );
+
+  
 }
