@@ -29,6 +29,7 @@ cloudinary.config(
 )
 
 
+
 app = FastAPI()
 
 app.add_middleware(
@@ -44,8 +45,11 @@ model = SentenceTransformer("all-MiniLM-L6-v2")
 # Hugging Face client (NEW)
 hf_client = InferenceClient(
     provider="auto",
-    api_key=HF_API_KEY,
+    api_key="HF_API_KEY",
 )
+
+
+
 
 # Groq client
 client = Groq(api_key=GROQ_API_KEY)

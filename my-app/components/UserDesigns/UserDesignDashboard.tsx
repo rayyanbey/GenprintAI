@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Loader2, AlertCircle, CheckCircle, Clock, XCircle, MessageSquare, Zap } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, Clock, XCircle, MessageSquare, Zap, Share2, Users } from 'lucide-react';
 
 interface Design {
   id: string;
@@ -13,6 +13,13 @@ interface Design {
   approval_status: string;
   admin_feedback?: string;
   admin_feedback_date?: string;
+  is_shared?: boolean;
+  community_post?: {
+    id: number;
+    title: string;
+    content: string;
+    created_at: string;
+  } | null;
 }
 
 interface StatusCounts {
@@ -39,6 +46,10 @@ const statusConfig = {
   },
 };
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function UserDesignDashboard() {
   const [designs, setDesigns] = useState<Design[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +60,12 @@ export default function UserDesignDashboard() {
     rejected: 0,
   });
   const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null);
+  const [sharingDesignId, setSharingDesignId] = useState<string | null>(null);
+  const [collaborationDesignId, setCollaborationDesignId] = useState<string | null>(null);
+  const [shareDrafts, setShareDrafts] = useState<Record<string, { title: string; content: string }>>({});
+  const [collaborationDrafts, setCollaborationDrafts] = useState<Record<string, { email: string; role: 'viewer' | 'editor' }>>({});
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDesigns();
@@ -82,8 +99,8 @@ export default function UserDesignDashboard() {
       });
 
       setStatusCounts(counts);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load designs');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to load designs'));
       console.error('Design fetch error:', err);
     } finally {
       setIsLoading(false);
@@ -96,6 +113,74 @@ export default function UserDesignDashboard() {
       return statusConfig.rejected;
     }
     return statusConfig[normalizedStatus as keyof typeof statusConfig] || statusConfig.pending;
+  };
+
+  const handleShareDesign = async (design: Design) => {
+    const draft = shareDrafts[design.id] || {
+      title: design.title,
+      content: design.description || '',
+    };
+
+    setBusyAction(`share-${design.id}`);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch('/api/community/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          design_id: design.id,
+          title: draft.title,
+          content: draft.content,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to share design');
+      }
+
+      setActionMessage('Design shared to the community.');
+      setSharingDesignId(null);
+      await fetchDesigns();
+    } catch (err: unknown) {
+      setActionMessage(getErrorMessage(err, 'Failed to share design'));
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleInviteCollaborator = async (design: Design) => {
+    const draft = collaborationDrafts[design.id] || { email: '', role: 'viewer' };
+    if (!draft.email.trim()) {
+      setActionMessage('Enter a collaborator email first.');
+      return;
+    }
+
+    setBusyAction(`collaborate-${design.id}`);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch(`/api/designs/${design.id}/collaborators`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draft),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to invite collaborator');
+      }
+
+      setActionMessage('Collaborator access saved.');
+      setCollaborationDesignId(null);
+      setCollaborationDrafts((prev) => ({
+        ...prev,
+        [design.id]: { email: '', role: 'viewer' },
+      }));
+    } catch (err: unknown) {
+      setActionMessage(getErrorMessage(err, 'Failed to invite collaborator'));
+    } finally {
+      setBusyAction(null);
+    }
   };
 
   if (isLoading) {
@@ -142,6 +227,12 @@ export default function UserDesignDashboard() {
                 Retry
               </button>
             </div>
+          </div>
+        )}
+
+        {actionMessage && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-blue-700 font-medium">{actionMessage}</p>
           </div>
         )}
 
@@ -283,6 +374,140 @@ export default function UserDesignDashboard() {
                           )}
                         </div>
                       )}
+
+                      {/* Community actions */}
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => {
+                              setSharingDesignId(sharingDesignId === design.id ? null : design.id);
+                              setShareDrafts((prev) => ({
+                                ...prev,
+                                [design.id]: prev[design.id] || {
+                                  title: design.community_post?.title || design.title,
+                                  content: design.community_post?.content || design.description || '',
+                                },
+                              }));
+                            }}
+                            disabled={design.is_shared}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                          >
+                            <Share2 className="w-4 h-4" />
+                            {design.is_shared ? 'Shared' : 'Share'}
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setCollaborationDesignId(
+                                collaborationDesignId === design.id ? null : design.id
+                              );
+                              setCollaborationDrafts((prev) => ({
+                                ...prev,
+                                [design.id]: prev[design.id] || { email: '', role: 'viewer' },
+                              }));
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                          >
+                            <Users className="w-4 h-4" />
+                            Collaborate
+                          </button>
+                        </div>
+
+                        {sharingDesignId === design.id && (
+                          <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                            <div className="grid gap-3">
+                              <input
+                                value={shareDrafts[design.id]?.title || ''}
+                                onChange={(event) =>
+                                  setShareDrafts((prev) => ({
+                                    ...prev,
+                                    [design.id]: {
+                                      title: event.target.value,
+                                      content: prev[design.id]?.content || '',
+                                    },
+                                  }))
+                                }
+                                placeholder="Community post title"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f08080]"
+                              />
+                              <textarea
+                                value={shareDrafts[design.id]?.content || ''}
+                                onChange={(event) =>
+                                  setShareDrafts((prev) => ({
+                                    ...prev,
+                                    [design.id]: {
+                                      title: prev[design.id]?.title || design.title,
+                                      content: event.target.value,
+                                    },
+                                  }))
+                                }
+                                placeholder="Tell the community about this design"
+                                rows={3}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f08080]"
+                              />
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  onClick={() => setSharingDesignId(null)}
+                                  className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-white transition"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => handleShareDesign(design)}
+                                  disabled={busyAction === `share-${design.id}`}
+                                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60 transition"
+                                >
+                                  Share Design
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {collaborationDesignId === design.id && (
+                          <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                            <div className="grid gap-3 md:grid-cols-[1fr_140px_auto]">
+                              <input
+                                value={collaborationDrafts[design.id]?.email || ''}
+                                onChange={(event) =>
+                                  setCollaborationDrafts((prev) => ({
+                                    ...prev,
+                                    [design.id]: {
+                                      email: event.target.value,
+                                      role: prev[design.id]?.role || 'viewer',
+                                    },
+                                  }))
+                                }
+                                placeholder="Collaborator email"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f08080]"
+                              />
+                              <select
+                                value={collaborationDrafts[design.id]?.role || 'viewer'}
+                                onChange={(event) =>
+                                  setCollaborationDrafts((prev) => ({
+                                    ...prev,
+                                    [design.id]: {
+                                      email: prev[design.id]?.email || '',
+                                      role: event.target.value === 'editor' ? 'editor' : 'viewer',
+                                    },
+                                  }))
+                                }
+                                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f08080]"
+                              >
+                                <option value="viewer">Viewer</option>
+                                <option value="editor">Editor</option>
+                              </select>
+                              <button
+                                onClick={() => handleInviteCollaborator(design)}
+                                disabled={busyAction === `collaborate-${design.id}`}
+                                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60 transition"
+                              >
+                                Invite
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -14,10 +14,15 @@ const protectedRoutes = [
   '/my-designs',
   '/mockup-request',
   '/design-studio',
+  '/community',
 ];
 
 // Routes that should redirect to home if already authenticated
 const authRoutes = ['/login', '/signup'];
+
+type SessionUserWithOnboarding = {
+  onboardingCompleted?: boolean;
+};
 
 export async function middleware(request: NextRequest) {
   try {
@@ -35,7 +40,7 @@ export async function middleware(request: NextRequest) {
 
     // Redirect to home if accessing auth routes with active session and onboarding completed
     if (isAuthRoute && session) {
-      const user = session.user as any;
+      const user = session.user as SessionUserWithOnboarding;
       if (!user.onboardingCompleted) {
         return NextResponse.redirect(new URL('/onboarding', request.url));
       }
@@ -45,7 +50,7 @@ export async function middleware(request: NextRequest) {
     // Redirect to onboarding if user is logged in but hasn't completed onboarding
     // Only redirect if trying to access protected user routes
     if (session && pathname !== '/onboarding' && pathname !== '/login' && pathname !== '/signup') {
-      const user = session.user as any;
+      const user = session.user as SessionUserWithOnboarding;
       if (!user.onboardingCompleted && (pathname.startsWith('/home') || pathname === '/')) {
         return NextResponse.redirect(new URL('/onboarding', request.url));
       }

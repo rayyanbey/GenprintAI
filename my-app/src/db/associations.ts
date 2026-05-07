@@ -5,7 +5,7 @@ interface Models {
 }
 
 export function applyAssociations(models: Models) {
-  const { User, Design, Template, Product, Mockup, Order, CommunityPost, PostLike, DesignEmbedding, CartItem, ProductVariant, TemplateUsage } = models;
+  const { User, Design, Template, Product, Mockup, Order, CommunityPost, PostLike, CommunityComment, CommunityRating, DesignCollaborator, DesignEmbedding, CartItem, ProductVariant, TemplateUsage } = models;
 
   // User associations
   User.hasMany(Design, { foreignKey: "user_id" });
@@ -59,6 +59,24 @@ export function applyAssociations(models: Models) {
 
   CommunityPost.hasMany(PostLike, { foreignKey: "post_id" });
   PostLike.belongsTo(CommunityPost, { foreignKey: "post_id" });
+
+  CommunityPost.hasMany(CommunityComment, { foreignKey: "post_id" });
+  CommunityComment.belongsTo(CommunityPost, { foreignKey: "post_id" });
+
+  User.hasMany(CommunityComment, { foreignKey: "user_id" });
+  CommunityComment.belongsTo(User, { foreignKey: "user_id" });
+
+  CommunityPost.hasMany(CommunityRating, { foreignKey: "post_id" });
+  CommunityRating.belongsTo(CommunityPost, { foreignKey: "post_id" });
+
+  User.hasMany(CommunityRating, { foreignKey: "user_id" });
+  CommunityRating.belongsTo(User, { foreignKey: "user_id" });
+
+  Design.hasMany(DesignCollaborator, { foreignKey: "design_id" });
+  DesignCollaborator.belongsTo(Design, { foreignKey: "design_id" });
+
+  User.hasMany(DesignCollaborator, { foreignKey: "user_id" });
+  DesignCollaborator.belongsTo(User, { foreignKey: "user_id" });
 
   // Design embedding associations
   Design.hasMany(DesignEmbedding, { foreignKey: "design_id" });

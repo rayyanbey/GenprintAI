@@ -11,12 +11,11 @@ import {
   Trash2,
   Eye,
   Calendar,
-  Filter,
   Plus,
   Image as ImageIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -58,8 +57,13 @@ export default function DesignsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [selectedDesign, setSelectedDesign] = useState<Design | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareTitle, setShareTitle] = useState('');
+  const [shareContent, setShareContent] = useState('');
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   // Fetch designs
   const fetchDesigns = async (currentFilter: string, currentPage: number) => {
@@ -95,6 +99,12 @@ export default function DesignsPage() {
     setPage(1);
   };
 
+  const handleTabChange = (value: string) => {
+    if (value === 'all' || value === 'shared' || value === 'private') {
+      handleFilterChange(value);
+    }
+  };
+
   // Handle delete
   const handleDelete = async () => {
     if (!selectedDesign) return;
@@ -119,6 +129,47 @@ export default function DesignsPage() {
       console.error('Failed to delete design:', error);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const openShareDialog = (design: Design) => {
+    setSelectedDesign(design);
+    setShareTitle(design.community_post?.title || design.title || 'Untitled Design');
+    setShareContent(design.community_post?.content || design.description || '');
+    setActionMessage(null);
+    setShareDialogOpen(true);
+  };
+
+  const handleShare = async () => {
+    if (!selectedDesign) return;
+
+    setSharing(true);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch('/api/community/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          design_id: selectedDesign.id,
+          title: shareTitle,
+          content: shareContent,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to share design');
+      }
+
+      setShareDialogOpen(false);
+      setSelectedDesign(null);
+      setActionMessage('Design shared to the community.');
+      fetchDesigns(filter, page);
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : 'Failed to share design');
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -176,7 +227,14 @@ export default function DesignsPage() {
         </div>
 
         {/* Filter Tabs */}
-        <Tabs value={filter} onValueChange={(val) => handleFilterChange(val as any)} className="mb-6">
+        {actionMessage && (
+          <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm font-medium text-blue-700">
+            {actionMessage}
+          </div>
+        )}
+
+        {/* Filter Tabs */}
+        <Tabs value={filter} onValueChange={handleTabChange} className="mb-6">
           <TabsList>
             <TabsTrigger value="all" className="gap-2">
               <Palette className="w-4 h-4" />
@@ -260,7 +318,7 @@ export default function DesignsPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -269,6 +327,20 @@ export default function DesignsPage() {
                       >
                         <Eye className="w-4 h-4 mr-1" />
                         View
+                      </Button>
+                      <Button
+                        variant={design.is_shared ? 'outline' : 'default'}
+                        size="sm"
+                        onClick={() => openShareDialog(design)}
+                        disabled={design.is_shared}
+                        className={
+                          design.is_shared
+                            ? 'text-green-700 border-green-200 bg-green-50 hover:bg-green-50'
+                            : 'bg-[#f4978e] hover:bg-[#f08080] text-white'
+                        }
+                      >
+                        <Share2 className="w-4 h-4 mr-1" />
+                        {design.is_shared ? 'Shared' : 'Share'}
                       </Button>
                       <Button
                         variant="outline"
@@ -319,7 +391,7 @@ export default function DesignsPage() {
           <DialogHeader>
             <DialogTitle>Delete Design</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{selectedDesign?.title || 'this design'}"? This
+              Are you sure you want to delete &quot;{selectedDesign?.title || 'this design'}&quot;? This
               action cannot be undone.
               {selectedDesign?.is_shared && (
                 <span className="block mt-2 text-amber-600 font-medium">
@@ -339,6 +411,58 @@ export default function DesignsPage() {
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               {deleting ? 'Deleting...' : 'Delete Design'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share to Community Dialog */}
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share to Community</DialogTitle>
+            <DialogDescription>
+              Add a title and short note. This will publish the design to the community gallery.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Community title
+              </label>
+              <input
+                value={shareTitle}
+                onChange={(event) => setShareTitle(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f08080]"
+                placeholder="Give this shared design a title"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Description
+              </label>
+              <textarea
+                value={shareContent}
+                onChange={(event) => setShareContent(event.target.value)}
+                rows={4}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f08080]"
+                placeholder="Tell the community about this design"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShareDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleShare}
+              disabled={sharing || !shareTitle.trim()}
+              className="bg-[#f4978e] hover:bg-[#f08080] text-white"
+            >
+              {sharing ? 'Sharing...' : 'Share to Community'}
             </Button>
           </DialogFooter>
         </DialogContent>
