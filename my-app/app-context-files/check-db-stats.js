@@ -1,4 +1,4 @@
-const { getModels } = require('./lib/db-dynamic');
+const { getModels } = require('../lib/db-dynamic');
 
 async function checkStats() {
   try {
