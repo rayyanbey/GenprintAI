@@ -34,7 +34,8 @@ export default function DesignCanvas() {
   const generateTrend = useCallback(async (text: string) => {
     try {
       setIsGeneratingTrend(true);
-      const response = await fetch('http://localhost:8000/extract-trend', {
+      const aiBaseUrl = process.env.FASTAPI_URL || 'http://localhost:8001';
+      const response = await fetch(`${aiBaseUrl}/extract-trend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
@@ -63,7 +64,8 @@ export default function DesignCanvas() {
 
     try {
       // Generate image using AI service
-      const response = await fetch('http://localhost:8000/generate-design', {
+      const aiBaseUrl = process.env.FASTAPI_URL || 'http://localhost:8001';
+      const response = await fetch(`${aiBaseUrl}/generate-design`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: prompt }),

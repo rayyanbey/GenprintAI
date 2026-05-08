@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { auth } from '@/lib/auth';
 import { getModels } from '@/lib/db-dynamic';
-import { nanoid } from 'nanoid';
 
 // POST - Share a design to community
 export async function POST(request: Request) {
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     // Get database models
     const models = await getModels();
-    const { Design, CommunityPost, User } = models;
+    const { Design, CommunityPost } = models;
 
     // Verify design exists and belongs to user
     const design = await Design.findOne({
@@ -69,15 +69,15 @@ export async function POST(request: Request) {
     }
 
     // Create community post
-    const postId = nanoid();
     const communityPost = await CommunityPost.create({
-      id: postId,
       user_id: session.user.id,
       design_id: design_id,
       title: title.trim(),
       content: content?.trim() || '',
       created_at: new Date(),
     });
+
+    await design.update({ is_community: true });
 
     return NextResponse.json(
       {
@@ -113,14 +113,14 @@ export async function GET(request: Request) {
 
     // Get database models
     const models = await getModels();
-    const { CommunityPost, Design, User } = models;
+    const { CommunityPost, Design, User, PostLike, CommunityComment, CommunityRating } = models;
 
     // Fetch community posts with related data
     const { count, rows: posts } = await CommunityPost.findAndCountAll({
       include: [
         {
           model: Design,
-          attributes: ['id', 'title', 'description', 'template_id', 'created_at'],
+          attributes: ['id', 'title', 'description', 'artwork_file_url', 'template_id', 'created_at'],
           required: true,
         },
         {
@@ -135,24 +135,48 @@ export async function GET(request: Request) {
     });
 
     // Format response
-    const formattedPosts = posts.map((post: any) => ({
-      id: post.id,
-      title: post.title,
-      content: post.content,
-      created_at: post.created_at,
-      design: {
-        id: post.Design?.id,
-        title: post.Design?.title,
-        description: post.Design?.description,
-        template_id: post.Design?.template_id,
-        created_at: post.Design?.created_at,
-      },
-      user: {
-        id: post.User?.id,
-        username: post.User?.username,
-        full_name: post.User?.full_name,
-        avatar_url: post.User?.avatar_url,
-      },
+    const session = await auth();
+    const currentUserId = session?.user?.id || null;
+
+    const formattedPosts = await Promise.all(posts.map(async (post: any) => {
+      const [likes, comments, ratings, likedByMe] = await Promise.all([
+        PostLike.count({ where: { post_id: post.id } }),
+        CommunityComment.count({ where: { post_id: post.id } }),
+        CommunityRating.findAll({ where: { post_id: post.id }, attributes: ['rating'] }),
+        currentUserId
+          ? PostLike.findOne({ where: { post_id: post.id, user_id: currentUserId } })
+          : Promise.resolve(null),
+      ]);
+      const ratingValues = ratings.map((rating: any) => Number(rating.rating || 0));
+      const averageRating = ratingValues.length
+        ? ratingValues.reduce((sum: number, rating: number) => sum + rating, 0) / ratingValues.length
+        : 0;
+
+      return {
+        id: post.id,
+        title: post.title,
+        content: post.content,
+        created_at: post.created_at,
+        likes,
+        likedByMe: Boolean(likedByMe),
+        comments,
+        averageRating,
+        ratingsCount: ratingValues.length,
+        design: {
+          id: post.Design?.id,
+          title: post.Design?.title,
+          description: post.Design?.description,
+          artwork_file_url: post.Design?.artwork_file_url,
+          template_id: post.Design?.template_id,
+          created_at: post.Design?.created_at,
+        },
+        user: {
+          id: post.User?.id,
+          username: post.User?.username,
+          full_name: post.User?.full_name,
+          avatar_url: post.User?.avatar_url,
+        },
+      };
     }));
 
     return NextResponse.json(

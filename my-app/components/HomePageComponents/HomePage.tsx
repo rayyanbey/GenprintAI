@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { SafeAvatar } from '@/components/ui/safe-image';
+import CommunityPosts from './CommunityPosts';
 
 type OrderStatus = 'pending_payment' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'payment_failed' | string;
 
@@ -77,6 +78,10 @@ function safeDate(value?: string | null): string {
   return date.toLocaleString();
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function HomePage() {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [designs, setDesigns] = useState<DesignSummary[]>([]);
@@ -108,8 +113,8 @@ export default function HomePage() {
 
       setOrders(Array.isArray(ordersJson.orders) ? ordersJson.orders : []);
       setDesigns(Array.isArray(designsJson.designs) ? designsJson.designs : []);
-    } catch (loadError: any) {
-      setError(loadError?.message || 'Failed to load dashboard data');
+    } catch (loadError: unknown) {
+      setError(getErrorMessage(loadError, 'Failed to load dashboard data'));
     }
   }, []);
 
@@ -266,10 +271,11 @@ export default function HomePage() {
 
         <section className="rounded-xl border border-[#fbc4ab]/70 bg-white p-4 shadow-sm">
           <Tabs defaultValue="overview" className="gap-4">
-            <TabsList className="w-full justify-start">
+            <TabsList className="h-auto w-full flex-wrap justify-start gap-1">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="orders">Orders</TabsTrigger>
               <TabsTrigger value="designs">Designs</TabsTrigger>
+              <TabsTrigger value="community">Community</TabsTrigger>
               <TabsTrigger value="notifications">Feedback Notifications</TabsTrigger>
             </TabsList>
 
@@ -356,6 +362,12 @@ export default function HomePage() {
                     ))}
                   </div>
                 )}
+              </Panel>
+            </TabsContent>
+
+            <TabsContent value="community">
+              <Panel title="Community Gallery" actionHref="/my-designs" actionLabel="Share a design">
+                <CommunityPosts />
               </Panel>
             </TabsContent>
 

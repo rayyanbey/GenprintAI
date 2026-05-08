@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 
 interface DesignSuggestionsProps {
@@ -21,19 +21,21 @@ export const DesignSuggestions: React.FC<DesignSuggestionsProps> = ({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const colorsKey = useMemo(() => preferredColors.join('|'), [preferredColors]);
 
   // Fetch design suggestions
-  const fetchSuggestions = async () => {
+  const fetchSuggestions = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/suggest-designs', {
+      const aiBaseUrl = process.env.FASTAPI_URL || 'http://localhost:8001';
+      const response = await fetch(`${aiBaseUrl}/suggest-designs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           product_type: productType || 'hoodie',
-          preferred_colors: preferredColors,
+          preferred_colors: colorsKey ? colorsKey.split('|') : [],
           design_style: designStyle,
           count: 6,
         }),
@@ -60,12 +62,12 @@ export const DesignSuggestions: React.FC<DesignSuggestionsProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [colorsKey, designStyle, productType]);
 
   // Fetch suggestions on mount or when context changes
   useEffect(() => {
     fetchSuggestions();
-  }, [productType, preferredColors, designStyle]);
+  }, [fetchSuggestions]);
 
   const handleSuggestionClick = (suggestion: string) => {
     onSuggestionClick(suggestion);

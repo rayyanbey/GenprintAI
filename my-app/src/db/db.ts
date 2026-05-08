@@ -16,6 +16,9 @@ import ProductVariantModel from "../models/product_variant.model";
 import TemplateUsageModel from "../models/template_usage.model";
 import CategoryModel from "../models/category.model";
 import ReturnRequestModel from "../models/return_request.model";
+import CommunityCommentModel from "../models/community_comment.model";
+import CommunityRatingModel from "../models/community_rating.model";
+import DesignCollaboratorModel from "../models/design_collaborator.model";
 import { applyAssociations } from "./associations";
 
 declare global {
@@ -89,6 +92,9 @@ function getModels() {
       TemplateUsage: TemplateUsageModel(seq),
       Category: CategoryModel(seq),
       ReturnRequest: ReturnRequestModel(seq),
+      CommunityComment: CommunityCommentModel(seq),
+      CommunityRating: CommunityRatingModel(seq),
+      DesignCollaborator: DesignCollaboratorModel(seq),
     };
     
     if (!global._models) {
