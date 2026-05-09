@@ -148,7 +148,7 @@ export async function POST(req: Request) {
     }
 
     const models = await getModels();
-    const { CommunityPost, Design } = models;
+    const { CommunityPost, Design, Template } = models;
     const design = await Design.findOne({
       where: { id: design_id, user_id: session.user.id },
     });
@@ -180,6 +180,40 @@ export async function POST(req: Request) {
     });
 
     await design.update({ is_community: true });
+
+    // AUTO-CREATE TEMPLATE from shared design
+    let category = 'apparel';
+    if (design.metadata?.category) {
+      category = design.metadata.category;
+    } else if (design.tags && Array.isArray(design.tags)) {
+      const tagCategory = design.tags.find((tag: string) =>
+        ['apparel', 'accessories', 'home_living', 'tech', 'gifts'].includes(tag.toLowerCase())
+      );
+      if (tagCategory) category = tagCategory.toLowerCase();
+    }
+
+    try {
+      const { v4: uuidv4 } = require('uuid');
+      await Template.create({
+        id: uuidv4(),
+        name: title.trim(),
+        description: design.description || '',
+        category,
+        usage_count: 0,
+        is_community: true,
+        created_by_user_id: session.user.id,
+        approval_status: 'pending',
+        metadata: {
+          design_id: design.id,
+          image_url: design.artwork_file_url,
+          canvas_data: design.canvas_data,
+          export_format: design.export_format || 'png',
+          shared_content: content?.trim() || '',
+        },
+      });
+    } catch (templateError: any) {
+      console.warn(`Warning: Could not create template: ${templateError.message}`);
+    }
 
     return NextResponse.json({ success: true, data: newPost }, { status: 201 });
   } catch (error: any) {

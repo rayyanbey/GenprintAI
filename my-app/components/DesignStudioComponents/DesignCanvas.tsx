@@ -94,6 +94,46 @@ export default function DesignCanvas() {
     }
   }, [prompt]);
 
+  const handleDownloadDesign = useCallback(async () => {
+    if (!generatedImage) {
+      setError('Please generate a design first');
+      return;
+    }
+
+    try {
+      // If the design is saved with an ID, download from API with proper headers
+      if (generatedDesignId) {
+        const response = await fetch(`/api/templates/download?id=${generatedDesignId}`);
+        if (!response.ok) throw new Error('Failed to download design');
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `design-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        // Otherwise, download directly from the image URL
+        const response = await fetch(generatedImage);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `design-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to download design');
+      console.error('Download error:', err);
+    }
+  }, [generatedImage, generatedDesignId]);
+
   const handleRegenerateMockup = async () => {
     if (!generatedImage) {
       setError('Please generate a design first');
@@ -184,6 +224,13 @@ export default function DesignCanvas() {
           {/* Action Buttons - Only show if image generated */}
           {generatedImage && (
             <div className="flex items-center gap-2 flex-wrap justify-center mt-4">
+              <button
+                onClick={handleDownloadDesign}
+                className="group relative flex items-center gap-2 px-4 py-2 bg-white text-[#f4978e] rounded-lg font-medium text-sm border-2 border-[#f4978e] overflow-hidden hover:bg-[#f4978e]/5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+              >
+                <Download className="w-4 h-4 relative z-10" />
+                <span className="relative z-10">Download</span>
+              </button>
               <button
                 onClick={handleSaveDesignClick}
                 className="group relative flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#f4978e] to-[#f08080] text-white rounded-lg font-medium text-sm overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"

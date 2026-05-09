@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     // Get database models
     const models = await getModels();
-    const { Design, CommunityPost } = models;
+    const { Design, CommunityPost, Template } = models;
 
     // Verify design exists and belongs to user
     const design = await Design.findOne({
@@ -79,10 +79,47 @@ export async function POST(request: Request) {
 
     await design.update({ is_community: true });
 
+    // AUTO-CREATE TEMPLATE from shared design
+    // Extract category from design metadata or tags, default to 'apparel'
+    let category = 'apparel';
+    if (design.metadata?.category) {
+      category = design.metadata.category;
+    } else if (design.tags && Array.isArray(design.tags)) {
+      const tagCategory = design.tags.find((tag: string) =>
+        ['apparel', 'accessories', 'home_living', 'tech', 'gifts'].includes(tag.toLowerCase())
+      );
+      if (tagCategory) category = tagCategory.toLowerCase();
+    }
+
+    try {
+      const { v4: uuidv4 } = require('uuid');
+      await Template.create({
+        id: uuidv4(),
+        name: title.trim(),
+        description: design.description || '',
+        category,
+        usage_count: 0,
+        is_community: true,
+        created_by_user_id: session.user.id,
+        approval_status: 'pending', // Requires admin approval
+        metadata: {
+          design_id: design.id,
+          image_url: design.artwork_file_url,
+          canvas_data: design.canvas_data,
+          export_format: design.export_format || 'png',
+          shared_content: content?.trim() || '',
+        },
+      });
+      console.log(`Template created for shared design ${design_id}`);
+    } catch (templateError: any) {
+      console.warn(`Warning: Could not create template: ${templateError.message}`);
+      // Don't fail the entire request if template creation fails
+    }
+
     return NextResponse.json(
       {
         success: true,
-        message: 'Design shared to community successfully',
+        message: 'Design shared to community successfully. Your design is now pending approval for the templates gallery.',
         post: {
           id: communityPost.id,
           design_id: communityPost.design_id,
