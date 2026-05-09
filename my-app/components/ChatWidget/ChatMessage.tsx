@@ -25,7 +25,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       <div
         className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
           isUser
-            ? "bg-blue-500 text-white rounded-br-none"
+            ? "bg-[#f4978e] text-white rounded-br-none"
             : "bg-gray-200 text-gray-800 rounded-bl-none"
         }`}
       >
@@ -48,8 +48,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 onClick={() => onPromptSelect?.(prompt)}
                 className={`block w-full text-left px-3 py-2 rounded text-xs transition-colors ${
                   isUser
-                    ? "bg-blue-600 hover:bg-blue-700"
-                    : "bg-white text-gray-800 hover:bg-gray-100"
+                    ? "bg-[#f08080] hover:bg-[#f06060]"
+                    : "bg-[#f4978e] text-white hover:bg-[#f08080]"
                 }`}
               >
                 <div className="font-semibold mb-1">

@@ -44,10 +44,10 @@ app.add_middleware(
 # Existing embedding model
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# Hugging Face client (NEW)
+# Hugging Face client
 hf_client = InferenceClient(
     provider="auto",
-    api_key="HF_API_KEY",
+    api_key=HF_API_KEY,
 )
 
 
@@ -168,7 +168,7 @@ Title: "{req.text}"
 Trend:
 """
     completion = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7,
         max_tokens=10,
@@ -213,7 +213,7 @@ Generate {req.count} ideas:"""
     
     try:
         completion = client.chat.completions.create(
-            model="mixtral-8x7b-32768",
+            model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.8,
             max_tokens=200,
@@ -275,39 +275,55 @@ Generate {req.count} ideas:"""
 
 
 
-## http://localhost:8001/generate-design
+## http://localhost:8000/generate-design
 @app.post("/generate-design")
 def generate_design(req: TextRequest):
     try:
-        prompt=preprocess_prompt(req.text)
+        print(f"[DEBUG] Generating design for prompt: {req.text}")
+        prompt = preprocess_prompt(req.text)
+        print(f"[DEBUG] Preprocessed prompt: {prompt}")
+        
         # 1. Generate image using Hugging Face
+        print(f"[DEBUG] Calling HF client for image generation...")
         image = hf_client.text_to_image(
             prompt,
             model="black-forest-labs/FLUX.1-schnell",
         )
+        print(f"[DEBUG] Image generated successfully")
 
         # 2. Convert image to bytes
         buffered = BytesIO()
         image.save(buffered, format="PNG")
         buffered.seek(0)
+        print(f"[DEBUG] Image converted to bytes, size: {len(buffered.getvalue())}")
 
         # 3. Upload to Cloudinary
+        print(f"[DEBUG] Uploading to Cloudinary...")
         upload_result = cloudinary.uploader.upload(
             buffered,
-            folder="ai-designs",  # optional folder
-            public_id=req.text.replace(" ", "_")[:50],  # optional naming
+            folder="ai-designs",
+            public_id=req.text.replace(" ", "_")[:50],
         )
+        print(f"[DEBUG] Upload successful, URL: {upload_result.get('secure_url')}")
 
         # 4. Get URL
         image_url = upload_result.get("secure_url")
 
         return {
             "prompt": req.text,
-            "image_url": image_url
+            "image_url": image_url,
+            "success": True
         }
 
     except Exception as e:
-        return {"error": str(e)}
+        error_msg = str(e)
+        print(f"[ERROR] Design generation failed: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "error": error_msg,
+            "success": False
+        }
 
 
 # ============================================================================
@@ -334,34 +350,38 @@ def validate_prompt_with_groq(prompt_text: str) -> dict:
 def generate_chat_response(user_message: str, conversation_history: list, user_context: dict) -> dict:
     """Generate a chatbot response using Groq."""
     
-    system_prompt = """You are a helpful AI design assistant for a print-on-demand platform (hoodies, t-shirts, mugs, etc).
-Your job is to:
-1. Help users generate creative design prompts for image generation
-2. Suggest design ideas and themes based on user preferences
-3. Help users navigate the platform features
-4. Be conversational, friendly, and creative
+    system_prompt = """You are a helpful AI design assistant for a print-on-demand platform.
+Your job is to help users create design ideas.
 
-IMPORTANT: When a user describes what they want, provide:
-1. A friendly conversational response
-2. At least 2 specific, detailed design prompts they can use
-3. Each prompt should be detailed and ready for image generation
+ALWAYS respond in this exact format:
 
-Format your response like this:
-RESPONSE: [Your friendly 1-2 sentence response here]
+RESPONSE: [Your friendly 1-2 sentence response]
 
-PROMPT 1: [Detailed design prompt]
-CATEGORY: [hoodie/tshirt/mug/etc]
-THEME: [minimalist/vintage/artistic/etc]
+PROMPT 1: [Design idea 1]
+CATEGORY: hoodie
+THEME: minimalist
 
-PROMPT 2: [Alternative design prompt]
-CATEGORY: [hoodie/tshirt/mug/etc]
-THEME: [minimalist/vintage/artistic/etc]"""
+PROMPT 2: [Design idea 2]
+CATEGORY: hoodie
+THEME: artistic
+
+PROMPT 3: [Design idea 3]
+CATEGORY: hoodie
+THEME: vintage
+
+Rules:
+- Start with RESPONSE: on its own line
+- Each prompt starts with PROMPT [number]:
+- Follow with CATEGORY: and THEME: on separate lines
+- Use simple, clear language
+- Valid categories: hoodie, tshirt, mug
+- Valid themes: minimalist, vintage, artistic, modern, cosmic, neon"""
     
     # Build messages for Groq
     messages = [{"role": "system", "content": system_prompt}]
     
-    # Add conversation history
-    for msg in conversation_history[-6:]:
+    # Add conversation history (limit to last 4 to reduce tokens)
+    for msg in conversation_history[-4:]:
         messages.append({
             "role": msg.role,
             "content": msg.content
@@ -372,19 +392,19 @@ THEME: [minimalist/vintage/artistic/etc]"""
     
     try:
         completion = client.chat.completions.create(
-            model="mixtral-8x7b-32768",
+            model="llama-3.3-70b-versatile",
             messages=messages,
-            temperature=0.7,
-            max_tokens=500,
+            temperature=0.6,
+            max_tokens=400,
         )
         
         response_text = completion.choices[0].message.content.strip()
+        print(f"[DEBUG] Groq raw response:\n{response_text}\n")
         
-        # Parse the response
-        message = response_text
+        # Parse the response with lenient error handling
+        message = ""
         suggested_prompts = []
         
-        # Extract prompts from response
         lines = response_text.split('\n')
         current_prompt = None
         current_category = None
@@ -392,35 +412,78 @@ THEME: [minimalist/vintage/artistic/etc]"""
         
         for line in lines:
             line = line.strip()
+            if not line:
+                continue
+            
+            # Extract RESPONSE
             if line.startswith("RESPONSE:"):
-                message = line.replace("RESPONSE:", "").strip()
-            elif line.startswith("PROMPT"):
+                msg = line.replace("RESPONSE:", "").strip()
+                if msg:
+                    message = msg
+            
+            # Extract PROMPT lines
+            elif "PROMPT" in line and ":" in line:
+                # Save previous prompt if complete
                 if current_prompt and current_category and current_theme:
                     suggested_prompts.append(
                         SuggestedPrompt(text=current_prompt, category=current_category, theme=current_theme)
                     )
-                current_prompt = line.split(":", 1)[-1].strip() if ":" in line else None
+                    current_prompt = None
+                    current_category = None
+                    current_theme = None
+                
+                # Extract new prompt (everything after the colon)
+                current_prompt = line.split(":", 1)[1].strip()
+            
+            # Extract CATEGORY
             elif line.startswith("CATEGORY:"):
-                current_category = line.replace("CATEGORY:", "").strip()
+                cat = line.replace("CATEGORY:", "").strip().lower()
+                current_category = cat if cat in ["hoodie", "tshirt", "mug", "sweatshirt", "hat", "bag"] else "hoodie"
+            
+            # Extract THEME
             elif line.startswith("THEME:"):
-                current_theme = line.replace("THEME:", "").strip()
+                theme = line.replace("THEME:", "").strip().lower()
+                current_theme = theme if theme in ["minimalist", "vintage", "artistic", "modern", "cosmic", "abstract", "neon", "watercolor", "typography"] else "minimalist"
         
-        # Add last prompt if exists
+        # Add last prompt if complete
         if current_prompt and current_category and current_theme:
             suggested_prompts.append(
                 SuggestedPrompt(text=current_prompt, category=current_category, theme=current_theme)
             )
         
+        # Fallback: if no prompts extracted but we have a message, create default prompts
+        if not suggested_prompts and message:
+            print(f"[DEBUG] No prompts found, creating defaults")
+            suggested_prompts = [
+                SuggestedPrompt(text="minimalist geometric design", category="hoodie", theme="minimalist"),
+                SuggestedPrompt(text="vintage retro style", category="hoodie", theme="vintage"),
+                SuggestedPrompt(text="artistic abstract pattern", category="hoodie", theme="artistic"),
+            ]
+        
+        # Final fallback if we got nothing
+        if not message:
+            message = "I'd love to help you with a design! Tell me what style you're thinking of."
+        
+        print(f"[DEBUG] Extracted message: {message}")
+        print(f"[DEBUG] Extracted {len(suggested_prompts)} prompts")
+        
         return {
-            "message": message if message and not message.startswith("RESPONSE:") else "I'd love to help! Here are some design ideas:",
+            "message": message,
             "suggested_prompts": suggested_prompts[:3],
             "suggested_actions": ["generate_image"] if suggested_prompts else [],
         }
         
+        
     except Exception as e:
+        print(f"[ERROR] Exception in generate_chat_response: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {
-            "message": "I'd love to help with your design! Tell me what you're envisioning.",
-            "suggested_prompts": [],
+            "message": "I'd love to help with your design! What style are you thinking about?",
+            "suggested_prompts": [
+                SuggestedPrompt(text="minimalist geometric design", category="hoodie", theme="minimalist"),
+                SuggestedPrompt(text="vintage retro aesthetic", category="hoodie", theme="vintage"),
+            ],
             "suggested_actions": ["generate_image"],
         }
 @app.post("/chat")

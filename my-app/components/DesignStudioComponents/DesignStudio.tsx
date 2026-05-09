@@ -11,19 +11,11 @@ export default function DesignStudio() {
 
   return (
     <div className="h-screen flex flex-col bg-white">
-      {/* Header */}
-      <DesignStudioHeader />
-
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Navigation */}
-        <ToolsPanel activeMenu={activeMenu} onMenuSelect={setActiveMenu} />
 
         {/* Center - Canvas */}
         <DesignCanvas />
-
-        {/* Right Sidebar - Properties */}
-        <PropertiesPanel />
       </div>
     </div>
   );

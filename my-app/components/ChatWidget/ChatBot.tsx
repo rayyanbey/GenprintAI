@@ -11,13 +11,17 @@ interface ChatBotProps {
   preferredColors?: string[];
 }
 
+interface ExtendedChatMessage extends ChatMessage {
+  suggestedPrompts?: SuggestedPrompt[];
+}
+
 export const ChatBot: React.FC<ChatBotProps> = ({
   onPromptSelected,
   productType,
   preferredColors,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ExtendedChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -50,42 +54,30 @@ export const ChatBot: React.FC<ChatBotProps> = ({
       content: inputValue,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputValue("");
     setIsLoading(true);
 
     try {
-      // Get response from chatbot service
+      // Get response from chatbot service (pass updated messages)
       const response = await chatService.sendMessage(
         inputValue,
-        messages,
+        updatedMessages,
         {
           productType,
           preferredColors,
         }
       );
 
-      // Add assistant message
-      const assistantMessage: ChatMessage = {
+      // Add assistant message with suggested prompts attached
+      const assistantMessage: ExtendedChatMessage = {
         role: "assistant",
         content: response.message,
+        suggestedPrompts: response.suggested_prompts || [],
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-
-      // Store prompts for display
-      if (response.suggested_prompts && response.suggested_prompts.length > 0) {
-        // Add prompts as a separate message with buttons
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: response.suggested_prompts
-              .map((p) => `${p.theme} • ${p.category}: ${p.text}`)
-              .join("\n\n"),
-          },
-        ]);
-      }
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => [
@@ -117,7 +109,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all p-4 z-40 hover:scale-110 transform"
+        className="fixed bottom-6 right-6 bg-[#f4978e] hover:bg-[#f08080] text-white rounded-full shadow-lg hover:shadow-xl transition-all p-4 z-40 hover:scale-110 transform"
         aria-label="Open chat"
       >
         <MessageCircle size={24} />
@@ -129,11 +121,11 @@ export const ChatBot: React.FC<ChatBotProps> = ({
   return (
     <div className="fixed bottom-6 right-6 w-96 max-h-[600px] bg-white rounded-lg shadow-2xl flex flex-col z-50">
       {/* Header */}
-      <div className="bg-blue-600 text-white p-4 rounded-t-lg flex justify-between items-center">
+      <div className="bg-[#f4978e] text-white p-4 rounded-t-lg flex justify-between items-center">
         <h3 className="font-semibold text-lg">Design Assistant</h3>
         <button
           onClick={() => setIsOpen(false)}
-          className="hover:bg-blue-700 p-1 rounded transition-colors"
+          className="hover:bg-[#f08080] p-1 rounded transition-colors"
           aria-label="Close chat"
         >
           <X size={20} />
@@ -161,6 +153,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({
                 key={index}
                 role={msg.role}
                 content={msg.content}
+                suggestedPrompts={msg.suggestedPrompts}
                 onPromptSelect={handlePromptSelect}
               />
             ))}
@@ -185,27 +178,32 @@ export const ChatBot: React.FC<ChatBotProps> = ({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Describe your design..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f4978e] text-sm"
             disabled={isLoading}
           />
           <button
             type="submit"
             disabled={isLoading || !inputValue.trim()}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors"
-            aria-label="Send message"
+            className="px-4 py-2 bg-[#f4978e] hover:bg-[#f08080] disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
           >
-            <Send size={18} />
+            Send
           </button>
         </form>
-        {messages.length > 0 && (
-          <button
-            onClick={handleClearChat}
-            className="mt-2 w-full text-xs text-gray-500 hover:text-gray-700 text-center"
-          >
-            Clear chat
-          </button>
-        )}
+        <div className="flex justify-between items-center mt-2 px-1">
+          <p className="text-xs text-gray-500">
+            Press Enter or click Send
+          </p>
+          {messages.length > 0 && (
+            <button
+              onClick={handleClearChat}
+              className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              Clear chat
+            </button>
+          )}
+        </div>
       </div>
+
     </div>
   );
 };
