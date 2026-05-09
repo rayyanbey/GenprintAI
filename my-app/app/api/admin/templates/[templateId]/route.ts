@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { templateId: string } }
+  { params }: { params: Promise<{ templateId: string }> }
 ) {
   try {
     const session = await auth();
@@ -70,7 +70,7 @@ export async function PUT(
       );
     }
 
-    const templateId = params.templateId;
+    const { templateId } = await params;
     const body = await request.json();
     const { action } = body; // 'approve' or 'reject'
 

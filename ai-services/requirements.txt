@@ -7,3 +7,4 @@ dotenv
 google-genai
 huggingface-hub
 pydantic
+Pillow

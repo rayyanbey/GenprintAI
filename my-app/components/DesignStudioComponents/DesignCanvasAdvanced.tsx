@@ -290,91 +290,86 @@ export default function DesignCanvas({
   const selectedLayer = layers.find((l) => l.id === selectedLayerId);
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Toolbar */}
-      <div className="w-64 bg-white border-r border-gray-200 p-4 overflow-y-auto">
+    <div className="flex h-screen bg-white">
+      {/* Canvas Area - Full Width */}
+      <div className="flex-1 flex flex-col p-6">
+        {/* Header */}
         <div className="mb-6">
-          <h2 className="text-lg font-bold mb-4">Design Studio</h2>
-          <div className="space-y-3">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Design title"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Design description"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm h-20 resize-none"
-            />
-          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Design Studio</h1>
+          <p className="text-sm text-gray-600">Create and customize your designs with AI assistance</p>
         </div>
 
-        {/* Add Elements */}
-        <div className="mb-6 pb-6 border-b border-gray-200">
-          <h3 className="text-sm font-semibold mb-2">Add Elements</h3>
-          <div className="space-y-2">
-            <button
-              onClick={addTextLayer}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Text
-            </button>
-            <button
-              onClick={addShapeLayer}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Shape
-            </button>
-          </div>
-        </div>
-
-        {/* Layers */}
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold mb-2">Layers</h3>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {layers.map((layer, idx) => (
-              <div
-                key={layer.id}
-                onClick={() => setSelectedLayerId(layer.id)}
-                className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                  selectedLayerId === layer.id
-                    ? 'bg-blue-100 border border-blue-300'
-                    : 'bg-gray-100 border border-gray-200 hover:bg-gray-200'
-                }`}
+        {/* Canvas Controls */}
+        <div className="flex justify-between items-center mb-4 px-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setZoom(Math.max(50, zoom - 10))}
+                className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{layer.name}</p>
-                    <p className="text-xs text-gray-500">{layer.type}</p>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteLayer(layer.id);
-                    }}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+                -
+              </button>
+              <span className="w-12 text-center text-sm font-medium">{zoom}%</span>
+              <button
+                onClick={() => setZoom(Math.min(200, zoom + 10))}
+                className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
+              >
+                +
+              </button>
+            </div>
+            <span className="text-sm text-gray-600">
+              {canvasWidth}x{canvasHeight}px
+            </span>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleDownloadDesign}
+              className="flex items-center gap-2 px-4 py-2 bg-[#f4978e] text-white rounded-lg hover:bg-[#f08080] transition-colors text-sm font-medium"
+            >
+              <Download className="w-4 h-4" />
+              Download
+            </button>
+            <button
+              onClick={handleSaveDesign}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors text-sm font-medium"
+            >
+              <Save className="w-4 h-4" />
+              {isSaving ? 'Saving...' : 'Save Design'}
+            </button>
           </div>
         </div>
 
-        {/* Layer Properties */}
+        {/* Canvas Container */}
+        <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200 overflow-auto">
+          <div
+            style={{
+              transform: `scale(${zoom / 100})`,
+              transformOrigin: 'center',
+            }}
+          >
+            <canvas
+              ref={canvasRef}
+              width={canvasWidth}
+              height={canvasHeight}
+              onMouseDown={handleCanvasMouseDown}
+              onMouseMove={handleCanvasMouseMove}
+              onMouseUp={handleCanvasMouseUp}
+              onMouseLeave={handleCanvasMouseUp}
+              className="bg-white shadow-lg border-2 border-gray-300 cursor-move"
+            />
+          </div>
+        </div>
+
+        {/* Bottom Panel - Minimalist */}
         {selectedLayer && (
-          <div className="pb-6 border-b border-gray-200">
-            <h3 className="text-sm font-semibold mb-3">Layer Properties</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-gray-700">
-                  Content
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex gap-8 items-end">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-gray-700 block mb-2">
+                  Layer: {selectedLayer.name}
                 </label>
                 <input
                   type="text"
@@ -384,11 +379,12 @@ export default function DesignCanvas({
                       content: e.target.value,
                     })
                   }
-                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  placeholder="Edit content"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 />
               </div>
-              <div>
-                <label className="text-xs font-medium text-gray-700">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-gray-700 block mb-2">
                   Opacity: {selectedLayer.opacity}%
                 </label>
                 <input
@@ -401,72 +397,86 @@ export default function DesignCanvas({
                       opacity: parseInt(e.target.value),
                     })
                   }
-                  className="w-full mt-1"
+                  className="w-full"
                 />
               </div>
+              <button
+                onClick={() => deleteLayer(selectedLayerId!)}
+                className="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
-
-        {/* Action Buttons */}
-        <div className="space-y-2 pt-4">
-          <button
-            onClick={handleSaveDesign}
-            disabled={isSaving}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            <Save className="w-4 h-4" />
-            {isSaving ? 'Saving...' : 'Save Design'}
-          </button>
-          <button
-            onClick={handleDownloadDesign}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Download
-          </button>
-        </div>
       </div>
 
-      {/* Canvas Area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto">
-        <div className="mb-4 flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setZoom(Math.max(50, zoom - 10))}
-              className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-            >
-              -
-            </button>
-            <span className="w-12 text-center text-sm">{zoom}%</span>
-            <button
-              onClick={() => setZoom(Math.min(200, zoom + 10))}
-              className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-            >
-              +
-            </button>
+      {/* Right Panel - Compact */}
+      <div className="w-72 bg-white border-l border-gray-200 p-4 overflow-y-auto flex flex-col">
+        {/* Quick Info */}
+        <div className="mb-6 pb-6 border-b border-gray-200">
+          <h3 className="text-sm font-semibold mb-3 text-gray-900">Design Info</h3>
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Design title"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Design description"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm h-16 resize-none"
+            />
           </div>
-          <span className="text-sm text-gray-600">
-            {canvasWidth}x{canvasHeight}px
-          </span>
         </div>
 
-        <div
-          style={{
-            transform: `scale(${zoom / 100})`,
-            transformOrigin: 'top center',
-          }}
-        >
-          <canvas
-            ref={canvasRef}
-            width={canvasWidth}
-            height={canvasHeight}
-            onMouseDown={handleCanvasMouseDown}
-            onMouseMove={handleCanvasMouseMove}
-            onMouseUp={handleCanvasMouseUp}
-            onMouseLeave={handleCanvasMouseUp}
-            className="bg-white shadow-lg border-2 border-gray-300 cursor-move"
-          />
+        {/* Quick Actions */}
+        <div className="mb-6 pb-6 border-b border-gray-200">
+          <h3 className="text-sm font-semibold mb-3 text-gray-900">Add Elements</h3>
+          <div className="space-y-2">
+            <button
+              onClick={addTextLayer}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-[#f4978e] text-white rounded-lg hover:bg-[#f08080] transition-colors font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Add Text
+            </button>
+            <button
+              onClick={addShapeLayer}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-[#f4978e] text-white rounded-lg hover:bg-[#f08080] transition-colors font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Add Shape
+            </button>
+          </div>
+        </div>
+
+        {/* Layers */}
+        <div className="flex-1">
+          <h3 className="text-sm font-semibold mb-3 text-gray-900">Layers ({layers.length})</h3>
+          <div className="space-y-2 overflow-y-auto max-h-96">
+            {layers.length === 0 ? (
+              <p className="text-xs text-gray-500 italic">No layers yet</p>
+            ) : (
+              layers.map((layer) => (
+                <div
+                  key={layer.id}
+                  onClick={() => setSelectedLayerId(layer.id)}
+                  className={`p-2 rounded-lg cursor-pointer transition-colors text-xs ${
+                    selectedLayerId === layer.id
+                      ? 'bg-[#f4978e] text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <p className="font-medium">{layer.name}</p>
+                  <p className="opacity-75">{layer.type}</p>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

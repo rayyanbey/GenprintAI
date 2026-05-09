@@ -35,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${poppins.className} antialiased bg-white bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]`}
+        className={`${poppins.className} antialiased min-h-screen bg-white bg-[radial-gradient(#d1d5db_1.5px,transparent_1.5px)] [background-size:24px_24px] text-gray-900`}
       >
         <SessionProvider>
           <ToastProvider>
