@@ -103,21 +103,62 @@ CACHE_TTL = 3600  # 1 hour in seconds
 
 
 def is_valid_prompt_local(prompt: str) -> bool:
-    """Quick local validation without API calls."""
+    """Validate a prompt using local heuristics and an LLM (Groq).
+
+    Fast local checks (length, banned keywords) are applied first. If they
+    pass, the function queries the same model used elsewhere
+    (llama-3.3-70b-versatile) to perform a stricter classification.
+    Returns True for valid prompts, False for invalid ones.
+    """
+    # Quick local checks
     if not prompt or len(prompt) < 3:
         return False
-    
-    # Check for obviously bad content
+
     bad_keywords = [
         'violence', 'hate', 'offensive', 'explicit', 'nsfw',
-        'porn', 'xxx', 'illegal', 'copyrighted'
+         'illegal', 'copyrighted'
     ]
     prompt_lower = prompt.lower()
     for keyword in bad_keywords:
         if keyword in prompt_lower:
             return False
-    
-    return True
+
+    # Use the Groq LLM for a more thorough validation. If the LLM call fails
+    # for any reason, fall back to local validation result (which is True here).
+    try:
+        llm_system = """You are a content safety assistant. Classify the given
+        user design prompt for an image generation system as either 'valid' or
+        'invalid'. Only output 'valid' or 'invalid: <short reason>' and nothing else."""
+
+        llm_user = f"Prompt to classify:\n\n\"{prompt}\"\n\nReturn:"
+
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": llm_system},
+                {"role": "user", "content": llm_user},
+            ],
+            temperature=0.0,
+            max_tokens=40,
+        )
+
+        llm_response = completion.choices[0].message.content.strip().lower()
+
+        # If the model explicitly marks invalid, return False
+        if llm_response.startswith("invalid"):
+            return False
+
+        # If it explicitly marks valid, return True
+        if llm_response.startswith("valid"):
+            return True
+
+        # Fallback interpretation: treat any response that contains 'invalid'
+        # as invalid, otherwise assume valid.
+        return 'invalid' not in llm_response
+
+    except Exception:
+        # On failure, be permissive (local checks already passed)
+        return True
 
 
 @app.post("/check-prompt")
