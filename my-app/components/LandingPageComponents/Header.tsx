@@ -15,16 +15,6 @@ export default function Header() {
           <span className="text-xl font-bold text-gray-900">Genprint AI</span>
         </div>
 
-        {/* Navigation Links */}
-        <div className="hidden md:flex items-center gap-8">
-          <Link href="pricing" className="text-gray-700 hover:text-gray-900 transition-colors">
-            Pricing
-          </Link>
-          <Link href="about" className="text-gray-700 hover:text-gray-900 transition-colors">
-            About Us
-          </Link>
-        </div>
-
         {/* Auth Buttons */}
         <div className="flex items-center gap-4">
           <Link href="/login" className="">
