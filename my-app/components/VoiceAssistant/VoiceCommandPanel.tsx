@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { Mic, MicOff, X, WandSparkles } from 'lucide-react';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { resolveVoiceCommand } from '@/lib/voiceCommands';
@@ -18,6 +19,14 @@ export default function VoiceCommandPanel() {
       interimResults: true,
       onFinalTranscript: (text) => {
         const command = resolveVoiceCommand(text);
+
+        if (command.type === 'logout') {
+          setStatusMessage('Logging you out...');
+          setEnabled(false);
+          stopListening();
+          void signOut({ callbackUrl: '/login' });
+          return;
+        }
 
         if (command.type === 'navigate' && command.path) {
           setStatusMessage(`Opening ${command.label}...`);

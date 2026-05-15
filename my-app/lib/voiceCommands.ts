@@ -1,5 +1,5 @@
 export interface VoiceCommandResult {
-  type: 'navigate' | 'none';
+  type: 'navigate' | 'logout' | 'none';
   label?: string;
   path?: string;
 }
@@ -12,6 +12,7 @@ export function resolveVoiceCommand(text: string): VoiceCommandResult {
   const normalized = normalizeVoiceText(text);
 
   const commandMap: Array<{ pattern: RegExp; path: string; label: string }> = [
+    { pattern: /\b(log out|logout|sign out|sign me out|log me out)\b/, path: '/login', label: 'Logout' },
     { pattern: /\b(open|go to|show|navigate to|take me to)\s+(the\s+)?mockups?( page)?\b/, path: '/mockup-request', label: 'Mockups' },
     { pattern: /\b(open|go to|show|navigate to|take me to)\s+(the\s+)?design( studio)?( page)?\b/, path: '/design', label: 'Design Studio' },
     { pattern: /\b(open|go to|show|navigate to|take me to)\s+(the\s+)?home(page)?\b/, path: '/home', label: 'Home' },
@@ -25,6 +26,14 @@ export function resolveVoiceCommand(text: string): VoiceCommandResult {
 
   for (const command of commandMap) {
     if (command.pattern.test(normalized)) {
+      if (command.label === 'Logout') {
+        return {
+          type: 'logout',
+          label: command.label,
+          path: command.path,
+        };
+      }
+
       return {
         type: 'navigate',
         path: command.path,

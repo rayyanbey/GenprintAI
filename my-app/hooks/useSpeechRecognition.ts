@@ -18,6 +18,8 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   } = options;
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const onFinalTranscriptRef = useRef<typeof onFinalTranscript>(onFinalTranscript);
+  const isStartingRef = useRef(false);
   const finalTranscriptRef = useRef('');
   const [isSupported, setIsSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -32,6 +34,10 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
 
     setIsSupported(Boolean(window.SpeechRecognition || window.webkitSpeechRecognition));
   }, []);
+
+  useEffect(() => {
+    onFinalTranscriptRef.current = onFinalTranscript;
+  }, [onFinalTranscript]);
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
@@ -83,7 +89,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
       if (finalChunk.trim()) {
         finalTranscriptRef.current = nextFinal;
         setTranscript(nextFinal);
-        onFinalTranscript?.(finalChunk.trim());
+        onFinalTranscriptRef.current?.(finalChunk.trim());
       }
 
       setInterimTranscript(interimChunk.trim());
@@ -99,7 +105,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     };
 
     return recognition;
-  }, [continuous, interimResults, language, onFinalTranscript]);
+  }, [continuous, interimResults, language]);
 
   const startListening = useCallback(() => {
     if (!isSupported) {
@@ -107,23 +113,36 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
       return false;
     }
 
+    if (isListening || isStartingRef.current) {
+      return false;
+    }
+
     setError(null);
     resetTranscript();
+    isStartingRef.current = true;
 
     try {
       if (!recognitionRef.current) {
         recognitionRef.current = createRecognition();
       }
 
-      recognitionRef.current?.start();
+      if (!recognitionRef.current) {
+        isStartingRef.current = false;
+        setError('Unable to initialize speech recognition');
+        return false;
+      }
+
+      recognitionRef.current.start();
       setIsListening(true);
+      isStartingRef.current = false;
       return true;
     } catch (startError) {
+      isStartingRef.current = false;
       setError(startError instanceof Error ? startError.message : 'Unable to start speech recognition');
       setIsListening(false);
       return false;
     }
-  }, [createRecognition, isSupported, resetTranscript]);
+  }, [createRecognition, isListening, isSupported, resetTranscript]);
 
   useEffect(() => {
     return () => {
