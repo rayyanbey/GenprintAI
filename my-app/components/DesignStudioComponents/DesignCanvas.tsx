@@ -107,33 +107,49 @@ export default function DesignCanvas() {
       return;
     }
 
-    try {
-      // If the design is saved with an ID, download from API with proper headers
-      if (generatedDesignId) {
-        const response = await fetch(`/api/templates/download?id=${generatedDesignId}`);
-        if (!response.ok) throw new Error('Failed to download design');
+    const downloadBlob = async (sourceUrl: string, fileNamePrefix: string) => {
+      const response = await fetch(sourceUrl);
+      if (!response.ok) {
+        throw new Error('Failed to download design image');
+      }
 
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `design-${Date.now()}.png`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${fileNamePrefix}-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    };
+
+    try {
+      const hasPersistedDesignId = generatedDesignId && !generatedDesignId.startsWith('design_');
+
+      // Saved designs can still use the templates download route, but AI-generated
+      // previews should download directly from the generated image URL.
+      if (hasPersistedDesignId) {
+        try {
+          const response = await fetch(`/api/templates/download?id=${generatedDesignId}`);
+          if (!response.ok) {
+            throw new Error('Failed to download design from saved record');
+          }
+
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `design-${Date.now()}.png`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        } catch {
+          await downloadBlob(generatedImage, 'design');
+        }
       } else {
-        // Otherwise, download directly from the image URL
-        const response = await fetch(generatedImage);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `design-${Date.now()}.png`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        await downloadBlob(generatedImage, 'design');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to download design');
