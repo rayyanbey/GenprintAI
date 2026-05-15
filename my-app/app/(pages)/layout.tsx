@@ -1,6 +1,7 @@
 import React from 'react';
 import { DashboardHeader } from '@/components/HomePageComponents';
 import { Breadcrumbs, Footer } from '@/components/Navigation';
+import { VoiceCommandPanel } from '@/components/VoiceAssistant';
 
 export default function PagesLayout({
   children,
@@ -19,6 +20,8 @@ export default function PagesLayout({
       <main className="flex-1">
         {children}
       </main>
+
+      <VoiceCommandPanel />
 
       {/* Footer */}
       <Footer />

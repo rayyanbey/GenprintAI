@@ -15,11 +15,13 @@ interface Design {
 interface DesignSelectorProps {
   onSelectDesign: (design: Design) => void;
   selectedDesignId?: string;
+  featuredDesign?: Design | null;
 }
 
 export default function DesignSelector({
   onSelectDesign,
   selectedDesignId,
+  featuredDesign,
 }: DesignSelectorProps) {
   const [designs, setDesigns] = useState<Design[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -100,6 +102,37 @@ export default function DesignSelector({
         <h2 className="text-lg font-bold text-gray-900">Your Designs</h2>
         <p className="text-xs text-gray-600 mt-1">Select a design to request mockups</p>
       </div>
+
+      {featuredDesign && (
+        <div className="border-b border-gray-200 bg-amber-50/60 p-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700">Community design</p>
+          <button
+            onClick={() => onSelectDesign(featuredDesign)}
+            className={`flex w-full gap-3 rounded-xl border-2 p-3 text-left transition-all ${
+              selectedDesignId === featuredDesign.id
+                ? 'border-[#f4978e] bg-orange-50'
+                : 'border-amber-200 bg-white hover:border-amber-300'
+            }`}
+          >
+            {featuredDesign.artwork_file_url && (
+              <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                <img
+                  src={featuredDesign.artwork_file_url}
+                  alt={featuredDesign.title}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-gray-900">{featuredDesign.title}</p>
+              {featuredDesign.description && (
+                <p className="mt-1 line-clamp-2 text-xs text-gray-600">{featuredDesign.description}</p>
+              )}
+              <p className="mt-1 text-xs text-amber-700">Ready to use in mockups</p>
+            </div>
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 grid grid-cols-1 gap-3">

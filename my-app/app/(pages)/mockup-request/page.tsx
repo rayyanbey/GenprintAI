@@ -5,11 +5,33 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import MockupRequestPage from '@/components/MockupRequest/MockupRequestPage';
 
+type InitialDesign = {
+  id: string;
+  title: string;
+  description?: string;
+  artwork_file_url?: string;
+  created_at: string;
+};
+
 export default function MockupRequestRoute() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialProductId = searchParams.get('productId') || undefined;
+  const initialDesignImageUrl = searchParams.get('designImageUrl') || undefined;
+  const initialDesignTitle = searchParams.get('designTitle') || undefined;
+  const initialDesignDescription = searchParams.get('designDescription') || undefined;
+  const initialDesignId = searchParams.get('designId') || undefined;
+
+  const initialDesign: InitialDesign | null = initialDesignImageUrl && initialDesignTitle
+    ? {
+        id: initialDesignId || `community-${initialDesignTitle.toLowerCase().replace(/\s+/g, '-')}`,
+        title: initialDesignTitle,
+        description: initialDesignDescription || '',
+        artwork_file_url: initialDesignImageUrl,
+        created_at: new Date().toISOString(),
+      }
+    : null;
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -32,5 +54,5 @@ export default function MockupRequestRoute() {
     return null;
   }
 
-  return <MockupRequestPage initialProductId={initialProductId} />;
+  return <MockupRequestPage initialProductId={initialProductId} initialDesign={initialDesign} />;
 }

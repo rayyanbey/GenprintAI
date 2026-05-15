@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Heart, MessageSquare, RefreshCw, Star, GitFork } from "lucide-react";
+import { Heart, MessageSquare, RefreshCw, Star } from "lucide-react";
 
 interface CommunityPost {
   id: number;
@@ -44,8 +43,14 @@ interface Trend {
   title: string;
 }
 
-export default function CommunityPosts() {
-  const router = useRouter();
+export interface CommunityPostCardData extends CommunityPost {}
+
+interface CommunityPostsProps {
+  showAll?: boolean;
+  onUseDesign?: (post: CommunityPostCardData) => void;
+}
+
+export default function CommunityPosts({ showAll = false, onUseDesign }: CommunityPostsProps) {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [trends, setTrends] = useState<Trend[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,10 +62,31 @@ export default function CommunityPosts() {
   const loadPosts = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/community-posts", { cache: "no-store" });
-      const data = await response.json();
-      if (data.ok || data.success) {
-        setPosts(data.data || data.posts || []);
+      const fetchPage = async (page: number) => {
+        const response = await fetch(`/api/community-posts?page=${page}&limit=50`, { cache: "no-store" });
+        const data = await response.json();
+        return { response, data };
+      };
+
+      const firstPage = await fetchPage(1);
+      if (firstPage.data.ok || firstPage.data.success) {
+        const firstPagePosts = firstPage.data.data || firstPage.data.posts || [];
+        const totalPages = Number(firstPage.data.pagination?.total_pages || 1);
+
+        if (!showAll || totalPages <= 1) {
+          setPosts(firstPagePosts);
+          return;
+        }
+
+        const remainingPages = Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) => index + 2);
+        const otherPages = await Promise.all(
+          remainingPages.map(async (page) => {
+            const { data } = await fetchPage(page);
+            return data.data || data.posts || [];
+          })
+        );
+
+        setPosts([...firstPagePosts, ...otherPages.flat()]);
       }
     } finally {
       setLoading(false);
@@ -285,6 +311,15 @@ export default function CommunityPosts() {
                 <MessageSquare className="w-4 h-4" />
                 {post.comments || 0}
               </button>
+
+              {onUseDesign && post.design?.artwork_file_url && (
+                <button
+                  onClick={() => onUseDesign(post)}
+                  className="flex items-center gap-2 px-3 py-1 text-sm rounded-full bg-gradient-to-r from-[#f08080] to-[#f4978e] text-white hover:opacity-90 transition"
+                >
+                  Use in Mockups
+                </button>
+              )}
 
               {/* <button
                 onClick={() => handleRemix(post.design?.id || post.design_id)}

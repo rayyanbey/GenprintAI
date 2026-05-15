@@ -9,11 +9,13 @@ import { SafeAvatar } from '@/components/ui/safe-image';
 import { ProfileSidebar } from '@/components/Profile';
 import { getUserInitials } from '@/lib/session-utils';
 import { useCart } from '@/contexts/CartContext';
+import { useAdminFeedbackNotifications } from '@/hooks/useAdminFeedbackNotifications';
 
 export default function DashboardHeader() {
   const { data: session } = useSession();
   const { totalItems } = useCart();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { count: adminFeedbackCount } = useAdminFeedbackNotifications();
 
   const userInitials = getUserInitials(session?.user?.name, session?.user?.email);
 
@@ -62,8 +64,13 @@ export default function DashboardHeader() {
 
             {/* Notification Bell - Only show when logged in */}
             {session?.user && (
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative" aria-label="Notifications">
+              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative" aria-label={`Notifications${adminFeedbackCount > 0 ? ` (${adminFeedbackCount} new admin feedback items)` : ''}`}>
                 <Bell className="w-5 h-5 text-gray-700" />
+                {adminFeedbackCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#ef4444] text-white text-[10px] font-bold min-w-5 h-5 px-1 rounded-full flex items-center justify-center shadow-sm">
+                    {adminFeedbackCount > 9 ? '9+' : adminFeedbackCount}
+                  </span>
+                )}
               </button>
             )}
 

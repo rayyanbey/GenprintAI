@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import DesignSelector from './DesignSelector';
 import ProductSelector from './ProductSelector';
 import MockupPreview from './MockupPreview';
@@ -15,10 +15,11 @@ interface Design {
 
 interface MockupRequestPageProps {
   initialProductId?: string;
+  initialDesign?: Design | null;
 }
 
-export default function MockupRequestPage({ initialProductId }: MockupRequestPageProps) {
-  const [selectedDesign, setSelectedDesign] = useState<Design | null>(null);
+export default function MockupRequestPage({ initialProductId, initialDesign }: MockupRequestPageProps) {
+  const [selectedDesign, setSelectedDesign] = useState<Design | null>(initialDesign || null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     initialProductId || null
   );
@@ -29,6 +30,10 @@ export default function MockupRequestPage({ initialProductId }: MockupRequestPag
   const handleSelectDesign = (design: Design) => {
     setSelectedDesign(design);
   };
+
+  useEffect(() => {
+    setSelectedDesign(initialDesign || null);
+  }, [initialDesign]);
 
   const handleSelectProduct = (productId: string, placement: string) => {
     setSelectedProductId(productId);
@@ -57,6 +62,7 @@ export default function MockupRequestPage({ initialProductId }: MockupRequestPag
           <DesignSelector
             onSelectDesign={handleSelectDesign}
             selectedDesignId={selectedDesign?.id}
+            featuredDesign={initialDesign}
           />
         </div>
 

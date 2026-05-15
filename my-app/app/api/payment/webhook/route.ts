@@ -86,9 +86,10 @@ async function handlePaymentSuccess(paymentIntent: any) {
 
         try {
           const user = await User.findByPk(order.user_id);
-          if (user?.email) {
+          const recipientEmail = user?.email || paymentIntent.metadata?.user_email || '';
+          if (recipientEmail) {
             const { sendOrderConfirmationEmail } = await import('@/lib/email');
-            await sendOrderConfirmationEmail(user.email, {
+            await sendOrderConfirmationEmail(recipientEmail, {
               orderId: order.id,
               orderDate: order.order_date,
               totalAmount: Number.parseFloat(String(order.total_amount || 0)),

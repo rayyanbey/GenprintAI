@@ -147,7 +147,7 @@ export function DesignsPieChart({ data }: { data: any[] }) {
         </ResponsiveContainer>
         <div className="flex-1 space-y-2">
           {data.map((item, i) => (
-            <div key={item.name} className="flex items-center gap-2">
+            <div key={`${item.name}-${i}`} className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
               <span className="text-xs text-gray-600 flex-1 truncate">{item.name}</span>
               <span className="text-xs font-semibold text-gray-800">{Math.round((item.value / total) * 100)}%</span>

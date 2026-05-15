@@ -100,10 +100,18 @@ class ChatService {
       }
 
       const data = await response.json();
+      const responseText = String(data.response || '').trim().toLowerCase();
+      const isValid = responseText.startsWith('valid');
+      const explanation = responseText.includes(',')
+        ? responseText.split(',', 2)[1].trim()
+        : isValid
+          ? 'Prompt looks good'
+          : 'Prompt was rejected';
+
       return {
-        valid: data.response.toLowerCase().includes("valid"),
-        label: data.response.split(",")[0] || "valid",
-        explanation: data.response.split(",")[1] || "Prompt looks good",
+        valid: isValid,
+        label: responseText.split(',', 1)[0] || 'valid',
+        explanation,
       };
     } catch (error) {
       console.error("Prompt validation error:", error);

@@ -83,8 +83,8 @@ export async function POST(request: Request) {
           });
 
           try {
-            const userEmail = order.User?.email;
-            if (userEmail) {
+              const userEmail = order.User?.email || paymentIntent.metadata?.user_email || '';
+              if (userEmail) {
               const { sendOrderConfirmationEmail } = await import('@/lib/email');
               await sendOrderConfirmationEmail(userEmail, {
                 orderId: order.id,

@@ -6,6 +6,8 @@ import MockupPreviewModalAsync from '../Mockups/MockupPreviewModalAsync';
 import { ChatBot } from '../ChatWidget/ChatBot';
 import { DesignSuggestions } from './DesignSuggestions';
 import { SuggestedPrompt } from '@/src/services/chat.service';
+import { chatService } from '@/src/services/chat.service';
+import VoiceInputButton from '@/components/VoiceAssistant/VoiceInputButton';
 
 export default function DesignCanvas() {
   const [prompt, setPrompt] = useState('');
@@ -63,6 +65,11 @@ export default function DesignCanvas() {
     setIsGenerating(true);
 
     try {
+      const validation = await chatService.validatePrompt(prompt);
+      if (!validation.valid) {
+        throw new Error(validation.explanation || 'Prompt was rejected by the validator');
+      }
+
       // Generate image using AI service
       const aiBaseUrl = process.env.FASTAPI_URL || 'http://localhost:8000';
       const response = await fetch(`${aiBaseUrl}/generate-design`, {
@@ -358,6 +365,11 @@ export default function DesignCanvas() {
                   <div className="w-1 h-1 bg-[#f4978e] rounded-full"></div>
                 </div>
               </div>
+                <VoiceInputButton
+                  onTranscript={(text) => setPrompt(text)}
+                  disabled={isGenerating}
+                  className="h-[52px] w-[52px]"
+                />
               <button
                 onClick={handleGenerateDesign}
                 disabled={isGenerating || !prompt.trim()}
@@ -377,7 +389,7 @@ export default function DesignCanvas() {
               </button>
             </div>
             <p className="text-xs text-gray-500 flex items-center gap-1">
-              <span>💡</span> Press Enter or click Generate to create your design
+              <span>💡</span> Press Enter, click Generate, or use the mic to dictate your design
             </p>
           </div>
         </div>
