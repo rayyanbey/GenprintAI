@@ -28,6 +28,10 @@ interface StatusCounts {
   rejected: number;
 }
 
+interface UserDesignDashboardProps {
+  searchTerm?: string;
+}
+
 const statusConfig = {
   approved: {
     color: 'bg-emerald-50 border-emerald-200 text-emerald-700',
@@ -50,7 +54,7 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
-export default function UserDesignDashboard() {
+export default function UserDesignDashboard({ searchTerm = '' }: UserDesignDashboardProps) {
   const [designs, setDesigns] = useState<Design[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,17 +70,23 @@ export default function UserDesignDashboard() {
   const [collaborationDrafts, setCollaborationDrafts] = useState<Record<string, { email: string; role: 'viewer' | 'editor' }>>({});
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const normalizedSearch = searchTerm.trim().toLowerCase();
 
   useEffect(() => {
     fetchDesigns();
-  }, []);
+  }, [searchTerm]);
 
   const fetchDesigns = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('/api/user/designs?limit=100');
+      const query = new URLSearchParams({ limit: '100' });
+      if (searchTerm.trim()) {
+        query.set('search', searchTerm.trim());
+      }
+
+      const response = await fetch(`/api/user/designs?${query.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch designs');
 
       const data = await response.json();
@@ -290,7 +300,9 @@ export default function UserDesignDashboard() {
             <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-600 text-lg font-medium">No designs yet</p>
             <p className="text-gray-500 mt-2">
-              Create your first design in the Design Studio to get started
+              {normalizedSearch
+                ? `No designs matched "${searchTerm}". Try another search term.`
+                : 'Create your first design in the Design Studio to get started'}
             </p>
           </div>
         ) : (

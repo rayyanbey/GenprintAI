@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getModels } from '@/lib/db-dynamic';
+import { Op } from 'sequelize';
 
 // GET - Fetch all user's designs with optional filtering
 export async function GET(request: Request) {
@@ -19,6 +20,7 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '12');
     const filter = searchParams.get('filter') || 'all'; // all, shared, private
+    const search = String(searchParams.get('search') || '').trim();
     const offset = (page - 1) * limit;
 
     // Get database models
@@ -35,6 +37,16 @@ export async function GET(request: Request) {
     ];
 
     let whereClause: any = { user_id: session.user.id };
+
+    if (search) {
+      whereClause = {
+        ...whereClause,
+        [Op.or]: [
+          { title: { [Op.iLike]: `%${search}%` } },
+          { description: { [Op.iLike]: `%${search}%` } },
+        ],
+      };
+    }
 
     if (filter === 'shared') {
       // Only designs that are shared to community
@@ -112,6 +124,7 @@ export async function GET(request: Request) {
           total_pages: Math.ceil(count / limit),
         },
         filter,
+        search,
       },
       { status: 200 }
     );

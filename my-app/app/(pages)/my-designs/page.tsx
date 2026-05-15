@@ -3,11 +3,14 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import UserDesignDashboard from '@/components/UserDesigns/UserDesignDashboard';
 
 export default function MyDesignsRoute() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const search = searchParams.get('search') || '';
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -30,5 +33,5 @@ export default function MyDesignsRoute() {
     return null;
   }
 
-  return <UserDesignDashboard />;
+  return <UserDesignDashboard searchTerm={search} />;
 }

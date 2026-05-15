@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Search, Bell, ShoppingCart } from 'lucide-react';
 import Image from 'next/image';
 import { SafeAvatar } from '@/components/ui/safe-image';
@@ -13,11 +14,25 @@ import { useAdminFeedbackNotifications } from '@/hooks/useAdminFeedbackNotificat
 
 export default function DashboardHeader() {
   const { data: session } = useSession();
+  const router = useRouter();
   const { totalItems } = useCart();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const { count: adminFeedbackCount } = useAdminFeedbackNotifications();
 
   const userInitials = getUserInitials(session?.user?.name, session?.user?.email);
+
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = searchTerm.trim();
+
+    if (!query) {
+      router.push('/my-designs');
+      return;
+    }
+
+    router.push(`/my-designs?search=${encodeURIComponent(query)}`);
+  };
 
   return (
     <>
@@ -53,14 +68,17 @@ export default function DashboardHeader() {
           {/* Search, Notifications, and Profile */}
           <div className="flex items-center gap-4">
             {/* Search Bar */}
-            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg">
+            <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg">
               <Search className="w-4 h-4 text-gray-500" />
               <input
                 type="text"
-                placeholder="Search projects..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search designs..."
                 className="bg-transparent border-none outline-none text-sm text-gray-700 placeholder-gray-500 w-48"
+                aria-label="Search designs"
               />
-            </div>
+            </form>
 
             {/* Notification Bell - Only show when logged in */}
             {session?.user && (
